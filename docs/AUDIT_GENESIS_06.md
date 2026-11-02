@@ -135,7 +135,7 @@ trece pentru CPU baseline, API rămâne read-only, niciun test automat nu execut
 Auth, autorizare, operații auditate și recovery verificabil rămân condiții înainte
 de orice extindere viitoare a HTTP spre modificarea storage-ului.
 
-## Verificare și limite
+## Verificare și limite — auditul inițial
 
 - [x] Baseline înainte de editare: rustfmt, 15 teste Rust și strict Clippy.
 - [x] După editare: rustfmt, 19 teste Rust și Clippy `--all-targets -- -D warnings`.
@@ -159,7 +159,8 @@ Build-ul a emis avertismentul upstream `depmod: ... vmlinuz: No such file or dir
 în timpul pregătirii modulelor; generatorul a continuat și a produs ISO-ul. Boot-ul
 QEMU este verificarea funcțională necesară, nu ignorarea acestui mesaj.
 
-ISO verificat: `build/iso/zionos-genesis-0.6.0-x86_64.iso` (aproximativ 352 MiB).
+ISO verificat în auditul inițial, înlocuit la build-urile ulterioare:
+`build/iso/zionos-genesis-0.6.0-x86_64.iso` (aproximativ 352 MiB).
 SHA256: `06300c5ff7b980865200cc8ab93a41c2eb0327d0b7872562cb425828e6da2791`.
 Loguri locale ignorate de Git: `build/audit-iso-final.log`,
 `build/audit-qemu-conroe.log`, `build/audit-qemu-default.log`, `build/qemu-smoke.log`.
@@ -179,3 +180,6 @@ acest raport. Eliminat: `scripts/build-iso.sh1`. Artefactele generate nu se publ
   semnificația contoarelor CPU; sursa locală și fixture-urile determină comportamentul API.
 
 Comenzile complete de build/rulare/test sunt în [README](../README.md).
+
+Actualizarea următoare de pe `main`, cu loader animat și verificările sale, este
+documentată separat în [Consola de boot](BOOT_CONSOLE.md).

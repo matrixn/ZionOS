@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           for script in platform/alpine/*.sh; do sh -n "$script"; done
           for script in platform/alpine/*.initd; do sh -n "$script"; done
-          for script in platform/alpine/zion-lab-provision platform/alpine/zion-lab-recover; do
+          for script in platform/alpine/zion-lab-provision platform/alpine/zion-lab-recover platform/alpine/zion-init-wrapper; do
             if [ -f "$script" ]; then sh -n "$script"; fi
           done
           node --check web/desktop/app.js

@@ -57,32 +57,16 @@ done
 # The overlay is an archive of root paths, not an APK package.
 # Keep one early-boot wrapper in the archived /usr/local/sbin directory.
 mkdir -p "$tmp/usr/local/sbin" "$tmp/etc"
-cat > "$tmp/usr/local/sbin/zion-init-wrapper" <<'ZION_EARLY_INIT'
-#!/bin/sh
-# Executat de BusyBox init inainte de OpenRC sysinit.
-CYAN="$(printf '\033[1;36m')"
-BLUE="$(printf '\033[1;34m')"
-GREEN="$(printf '\033[1;32m')"
-GRAY="$(printf '\033[0;37m')"
-RESET="$(printf '\033[0m')"
-printf '\n%s\n' "${CYAN}==========================================================${RESET}"
-printf '%s\n' "${CYAN}  ZION OS  ${RESET}Genesis 0.6 (AL 3.23 / Linux $(uname -r))"
-printf '%s\n' "${CYAN}==========================================================${RESET}"
-printf '%s\n' "${BLUE}[INIT]${RESET} Pornim OpenRC: coordoneaza serviciile sistemului."
-printf '%s\n' "${BLUE}[FILESYSTEM]${RESET} Pregatim directoarele si sistemele de fisiere."
-printf '%s\n' "${BLUE}[HARDWARE]${RESET} Detectam dispozitivele si incarcam driverele."
-printf '%s\n' "${BLUE}[NETWORK]${RESET} Activam reteaua si solicitam IP prin DHCP."
-printf '%s\n' "${BLUE}[STORAGE]${RESET} Pregatim serviciile NAS si Zion Core."
-printf '%s\n\n' "${GREEN}[BOOT]${RESET} Continuam initializarea standard Alpine/OpenRC."
-exec /sbin/openrc sysinit
-ZION_EARLY_INIT
+mkdir -p "$tmp/usr/local/lib/zionos"
+cp /workspace/platform/alpine/boot-ui.sh "$tmp/usr/local/lib/zionos/boot-ui.sh"
+cp /workspace/platform/alpine/zion-init-wrapper "$tmp/usr/local/sbin/zion-init-wrapper"
 chmod 755 "$tmp/usr/local/sbin/zion-init-wrapper"
 
 # BusyBox init executa sysinit, boot si default in ordine.
 cat > "$tmp/etc/inittab" <<'ZION_EARLY_INITTAB'
-::sysinit:/usr/local/sbin/zion-init-wrapper
-::sysinit:/sbin/openrc boot
-::wait:/sbin/openrc default
+::sysinit:/usr/local/sbin/zion-init-wrapper sysinit
+::sysinit:/usr/local/sbin/zion-init-wrapper boot
+::wait:/usr/local/sbin/zion-init-wrapper default
 
 ttyS0::respawn:/sbin/getty 115200 ttyS0 vt100
 tty1::respawn:/sbin/getty 38400 tty1 linux
@@ -100,7 +84,7 @@ for executable in usr/local/sbin/zion-lab-provision usr/local/sbin/zion-lab-reco
     opt/zionos/bin/zion-core etc/init.d/zion-core; do
     test -x "$tmp/$executable" || { echo "ERROR: missing executable $executable" >&2; exit 1; }
 done
-for asset in etc/inittab opt/zionos/web/index.html opt/zionos/web/app.js; do
+for asset in etc/inittab opt/zionos/web/index.html opt/zionos/web/app.js usr/local/lib/zionos/boot-ui.sh; do
     test -s "$tmp/$asset" || { echo "ERROR: missing or empty $asset" >&2; exit 1; }
 done
 

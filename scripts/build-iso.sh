@@ -12,6 +12,8 @@ for file in \
   "$ROOT/platform/alpine/mkimg.zionos.sh" \
   "$ROOT/platform/alpine/genapkovl-zionos.sh" \
   "$ROOT/platform/alpine/initramfs-banner.sh" \
+  "$ROOT/platform/alpine/boot-ui.sh" \
+  "$ROOT/platform/alpine/zion-init-wrapper" \
   "$ROOT/scripts/brand-initramfs.sh"; do
   if [[ ! -f "$file" ]]; then
     echo "ERROR: Required file missing: $file"
@@ -37,7 +39,8 @@ apk add --no-cache \
 sh /workspace/scripts/brand-initramfs.sh \
   /usr/share/mkinitfs/initramfs-init \
   /workspace/platform/alpine/initramfs-banner.sh \
-  /usr/share/mkinitfs/initramfs-init
+  /usr/share/mkinitfs/initramfs-init \
+  /workspace/platform/alpine/boot-ui.sh
 
 mkdir -p /root/.abuild /workspace/build/iso
 abuild-keygen -a -n

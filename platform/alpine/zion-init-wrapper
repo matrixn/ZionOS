@@ -1,0 +1,69 @@
+#!/bin/sh
+# Own the renderer for exactly one OpenRC phase; preserve its stdin and exit status.
+set -u
+zion_phase=${1:-sysinit}
+case "$zion_phase" in
+    sysinit) zion_step=2;;
+    boot) zion_step=3;;
+    default) zion_step=4;;
+    *) echo 'Usage: zion-init-wrapper sysinit|boot|default' >&2; exit 2;;
+esac
+printf '[INIT] ZION OS / OpenRC %s\n' "$zion_phase"
+if [ ! -r /usr/local/lib/zionos/boot-ui.sh ]; then exec /sbin/openrc "$zion_phase"; fi
+. /usr/local/lib/zionos/boot-ui.sh
+
+# Plain diagnostics remain available on pipes, dumb terminals or explicit opt-out.
+zion_cmdline="$(cat /proc/cmdline 2>/dev/null || :)"
+case " $zion_cmdline " in *' zion.splash=off '*) exec /sbin/openrc "$zion_phase";; esac
+if [ ! -t 1 ] || [ "${TERM:-linux}" = dumb ]; then exec /sbin/openrc "$zion_phase"; fi
+zion_size="$(stty size 2>/dev/null || :)"
+set -- $zion_size
+if [ "$#" -eq 2 ]; then
+    if { [ "$1" -gt 0 ] && [ "$1" -lt 24 ]; } || { [ "$2" -gt 0 ] && [ "$2" -lt 74 ]; }; then
+        exec /sbin/openrc "$zion_phase"
+    fi
+fi
+zion_log="/var/log/zion-boot/$zion_phase.log"
+# Restrict only our log creation; services must inherit the original boot umask.
+if ! (umask 077; mkdir -p /var/log/zion-boot && : > "$zion_log"); then
+    exec /sbin/openrc "$zion_phase"
+fi
+zion_animator=
+zion_boot_cleanup() {
+    if [ -n "$zion_animator" ]; then
+        kill "$zion_animator" 2>/dev/null || :
+        wait "$zion_animator" 2>/dev/null || :
+        zion_animator=
+    fi
+    printf '\033[r\033[0m\033[?25h'
+}
+trap 'zion_boot_cleanup' EXIT
+trap 'exit 130' INT
+trap 'exit 143' HUP TERM
+zion_owner=$$
+printf '\033[2J\033[H\033[?25l'
+zion_boot_frame "$zion_phase" "$zion_step" 0 ''
+# Unexpected direct-console messages scroll only inside the diagnostics area.
+printf '\033[19;24r'
+zion_boot_animate &
+zion_animator=$!
+if RC_NOCOLOR=yes /sbin/openrc "$zion_phase" > "$zion_log" 2>&1; then zion_status=0
+else zion_status=$?; fi
+zion_boot_cleanup
+# Replay complete output to serial scrollback, including DHCP and any warnings.
+printf '\033[2J\033[H'
+cat "$zion_log"
+if [ "$zion_status" -ne 0 ]; then
+    printf '\n[BOOT ERROR] OpenRC %s exited %s. Full log: %s\n' "$zion_phase" "$zion_status" "$zion_log"
+elif [ "$zion_phase" = default ]; then
+    zion_final=pending
+    zion_health="$(curl -fsS --max-time 2 http://127.0.0.1:8080/api/health 2>/dev/null || :)"
+    if printf '%s' "$zion_health" | grep -q '"service":"zion-core"' &&
+       printf '%s' "$zion_health" | grep -q '"status":"ok"'; then zion_final=ready; fi
+    zion_recent="$(tail -n 4 "$zion_log" | tr -cd '\12\40-\176')"
+    printf '\033[2J\033[H'
+    zion_boot_frame "$zion_final" 4 0 "$zion_recent"
+    # Leave the lower console rows free for getty; keep the logo above the prompt.
+    printf '\033[18;1H\033[J[BOOT COMPLETE] %s | logs: /var/log/zion-boot/\n' "$zion_final"
+fi
+exit "$zion_status"

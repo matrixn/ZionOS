@@ -31,6 +31,11 @@ stages = ["[INITRAMFS]", "[INIT]", "lease of", "Starting ZionOS Core"]
 positions = [log.index(stage) for stage in stages]
 assert positions == sorted(positions), "Unexpected initramfs/OpenRC/DHCP/API boot order"
 print("PASS: initramfs branding precedes OpenRC, DHCP and Zion Core")
+assert "LIVE BOOT TELEMETRY" in log, "Animated console loader did not run"
+assert "[BOOT COMPLETE] ready" in log, "Loader never verified Zion Core readiness"
+assert "\x1b[?25l" in log and "\x1b[?25h" in log, "Missing loader cursor lifecycle"
+assert "[BOOT ERROR]" not in log, "OpenRC phase failed; inspect the boot log"
+print("PASS: animated loader, API-verified completion and restored cursor")
 PY
     echo 'PASS: QEMU automated smoke tests'
     exit 0

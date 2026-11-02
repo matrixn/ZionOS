@@ -4,6 +4,7 @@
 *.sh text eol=lf
 *.initd text eol=lf
 platform/alpine/zion-lab-* text eol=lf
+platform/alpine/zion-init-wrapper text eol=lf
 *.rs text eol=lf
 *.toml text eol=lf
 *.yml text eol=lf

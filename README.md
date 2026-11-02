@@ -92,6 +92,20 @@ Brandingul initramfs precede OpenRC; mesajele bootloader-ului și kernelului pot
 păstrează identitatea Alpine. Versiunile schemelor API rămân compatibile: health și
 provisioning `0.6.0`, storage `0.4.0`, pools `0.5.0`.
 
+## Consolă animată — actualizare după audit
+
+- [x] Logo ASCII mare ZIONOS, paletă neon și indicator de activitate animat în OpenRC.
+- [x] Etape reale `sysinit` → `boot` → `default`, fără procent inventat sau întârzieri artificiale.
+- [x] Ultimele mesaje reale în panou; loguri complete în `/var/log/zion-boot/` și scrollback serial.
+- [x] Stare online condiționată de health API; stare pending distinctă.
+- [x] Oprirea rendererului și restaurarea cursorului după fiecare etapă; erorile rămân vizibile.
+- [x] Mod clasic cu `zion.splash=off`, fallback fără TTY, terminal mic sau `TERM=dumb`.
+- [x] 13 teste fixture, inclusiv PTY, eroare, cursor, întrerupere și ready/pending.
+- [x] ISO reconstruit; QEMU implicit și `Conroe`: boot, DHCP, API și finalizare ready verificate.
+
+Intro-ul din initramfs este static; animația acoperă OpenRC, inclusiv verificarea modloop.
+Detalii, mod verbose, loguri și limite: [Consola de boot](docs/BOOT_CONSOLE.md).
+
 ## Build și teste: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,
@@ -161,7 +175,7 @@ dovedesc că întregul disc este nou; vezi riscurile rămase în raport.
 ## Rezultate și roadmap
 
 - [x] Rust: 19 teste, rustfmt și Clippy cu `-D warnings`.
-- [x] 7 teste de siguranță pe fixture-uri, fără dispozitive bloc.
+- [x] 13 teste de siguranță și consolă pe fixture-uri, fără dispozitive bloc.
 - [x] Sintaxă Bash, shell Alpine/OpenRC și `node --check` pentru desktopul activ.
 - [x] Build release musl și staging.
 - [x] Build final ISO și verificarea `/init` din imaginea produsă.
