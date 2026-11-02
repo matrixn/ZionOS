@@ -5,6 +5,20 @@ TARGET=/dev/vdb
 CONFIRM='ZIONOS-LAB-ERASE-VDB'
 
 fail() { printf 'ZionOS LAB DENIED: %s\n' "$*" >&2; exit 1; }
+check_blank_header() {
+  # Capture dd's status separately: POSIX pipelines otherwise hide read failures.
+  header="$(mktemp)" || fail 'cannot allocate header probe'
+  if ! dd if="$TARGET" of="$header" bs=4096 count=1 2>/dev/null; then
+    rm -f "$header"
+    fail 'cannot read target header'
+  fi
+  # -v prevents od from replacing repeated lines with '*'.
+  first="$(od -An -v -tx1 "$header" | tr -d ' \n')"
+  rm -f "$header"
+  [ "${#first}" -eq 8192 ] || fail 'incomplete target header probe'
+  case "$first" in *[!0]*) fail 'first 4 KiB are not blank';; esac
+}
+
 validate() {
   [ -b "$TARGET" ] || fail 'missing dedicated virtio disk /dev/vdb'
   [ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || :)" = QEMU ] || fail 'not QEMU hardware'
@@ -27,10 +41,8 @@ validate() {
     code=$?
     [ "$code" -eq 2 ] || fail "blkid probe failed unexpectedly ($code)"
   fi
-  # Refuse any disk that starts with non-zero bytes, even if blkid misses its format.
-  # dd here reads only, it does not write anything.
-  first="$(dd if="$TARGET" bs=4096 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')"
-  case "$first" in *[1-9a-fA-F]*) fail 'first 4 KiB are not blank';; esac
+  # This only checks the header; it does not prove the whole disk is empty.
+  check_blank_header
 }
 
 case "${1:-}" in

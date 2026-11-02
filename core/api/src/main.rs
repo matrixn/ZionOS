@@ -64,7 +64,11 @@ fn parse_cpu_times(stat: &str) -> Option<(u64, u64)> {
     if ticks.len() < 5 {
         return None;
     }
-    let total = ticks.iter().copied().sum();
+    // guest and guest_nice are already included in user and nice respectively.
+    let total = ticks
+        .iter()
+        .take(8)
+        .try_fold(0_u64, |sum, value| sum.checked_add(*value))?;
     let idle = ticks[3].saturating_add(ticks[4]);
     Some((total, idle))
 }
@@ -272,6 +276,21 @@ mod tests {
     #[test]
     fn parses_cpu_statistics() {
         assert_eq!(parse_cpu_times("cpu  2 3 4 5 6 7 8 9\n"), Some((44, 11)));
+    }
+
+    #[test]
+    fn cpu_statistics_do_not_count_guest_time_twice() {
+        assert_eq!(
+            parse_cpu_times("cpu  2 3 4 5 6 7 8 9 2 1\n"),
+            Some((44, 11))
+        );
+    }
+
+    #[test]
+    fn cpu_statistics_reject_invalid_or_overflowing_counters() {
+        assert_eq!(parse_cpu_times("cpu 1 2 bad 4 5"), None);
+        assert_eq!(parse_cpu_times("cpu0 1 2 3 4 5"), None);
+        assert_eq!(parse_cpu_times("cpu 18446744073709551615 1 0 0 0"), None);
     }
 
     #[test]
