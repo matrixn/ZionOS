@@ -1,0 +1,63 @@
+#!/bin/sh
+# ZionOS Genesis 0.6 — intentionally narrow, interactive, QEMU-only disposable-disk provisioning.
+set -eu
+TARGET=/dev/vdb
+CONFIRM='ZIONOS-LAB-ERASE-VDB'
+
+fail() { printf 'ZionOS LAB DENIED: %s\n' "$*" >&2; exit 1; }
+validate() {
+  [ -b "$TARGET" ] || fail 'missing dedicated virtio disk /dev/vdb'
+  [ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || :)" = QEMU ] || fail 'not QEMU hardware'
+  [ -e /etc/zionos-lab ] || fail 'not a ZionOS laboratory image'
+  [ "$(cat /sys/block/vdb/ro 2>/dev/null || :)" = 0 ] || fail 'target is read-only'
+  [ "$(cat /sys/block/vdb/removable 2>/dev/null || :)" = 0 ] || fail 'removable target forbidden'
+  sectors="$(cat /sys/block/vdb/size 2>/dev/null || :)"
+  case "$sectors" in ''|*[!0-9]*) fail 'unknown size';; esac
+  [ "$sectors" -ge 262144 ] && [ "$sectors" -le 16777216 ] || fail 'size outside 128 MiB..8 GiB'
+  if find /sys/block/vdb -maxdepth 1 -name 'vdb[0-9]*' | grep -q .; then
+    fail 'partition(s) detected on /dev/vdb'
+  fi
+  if grep -Fq "$TARGET" /proc/self/mountinfo; then fail 'target appears in mount table'; fi
+  if [ -d /sys/block/vdb/holders ] && [ -n "$(ls -A /sys/block/vdb/holders)" ]; then
+    fail 'target has block-device holders'
+  fi
+  if blkid -p "$TARGET" >/dev/null 2>&1; then
+    fail 'existing filesystem/partition signature found; never overwrite'
+  else
+    code=$?
+    [ "$code" -eq 2 ] || fail "blkid probe failed unexpectedly ($code)"
+  fi
+  # Refuse any disk that starts with non-zero bytes, even if blkid misses its format.
+  # dd here reads only, it does not write anything.
+  first="$(dd if="$TARGET" bs=4096 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')"
+  case "$first" in *[1-9a-fA-F]*) fail 'first 4 KiB are not blank';; esac
+}
+
+case "${1:-}" in
+  --plan)
+    validate
+    printf 'ZionOS LAB PLAN (NO WRITES)\n'
+    printf '  Device: %s (separate disposable QEMU disk)\n' "$TARGET"
+    printf '  Size: %s sectors (512-byte units)\n' "$sectors"
+    printf '  Action if confirmed later: mkfs.ext4 -F -L ZION_LAB /dev/vdb\n'
+    printf '  No partitions, RAID, or persistent recovery points will be created.\n'
+    ;;
+  --apply)
+    validate
+    [ -t 0 ] && [ -t 1 ] || fail 'interactive QEMU console required'
+    printf '\033[1;31mWARNING: this IRREVERSIBLY formats ONLY %s inside QEMU.\033[0m\n' "$TARGET"
+    printf 'Type exactly %s: ' "$CONFIRM"
+    IFS= read -r response
+    [ "$response" = "$CONFIRM" ] || fail 'confirmation phrase mismatch'
+    validate # re-check immediately before invoking mkfs
+    command -v mkfs.ext4 >/dev/null 2>&1 || fail 'mkfs.ext4 missing'
+    mkfs.ext4 -F -L ZION_LAB "$TARGET"
+    printf 'ZionOS LAB: ext4 created on disposable virtual disk. Unmounted.\n'
+    printf 'Next: zion-lab-recover --check\n'
+    ;;
+  *)
+    echo 'Usage: zion-lab-provision --plan | --apply'
+    echo 'No HTTP endpoint is permitted to call this utility.'
+    exit 2
+    ;;
+esac

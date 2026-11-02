@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+name="ZionOS Core"
+description="ZionOS Genesis read-only monitoring API"
+command="/opt/zionos/bin/zion-core"
+command_background="yes"
+pidfile="/run/zion-core.pid"
+command_user="nobody:nobody"
+output_log="/var/log/zion-core.log"
+error_log="/var/log/zion-core.err"
+depend() { need net; after firewall; }
+start_pre() {
+    einfo "[BOOT 4/4] Pornim Zion Core: API-ul NAS, metrici hardware si instrumente read-only."
+    checkpath -f -m 0644 -o nobody:nobody /var/log/zion-core.log /var/log/zion-core.err
+}

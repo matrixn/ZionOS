@@ -1,0 +1,21 @@
+#!/bin/sh
+# Diagnostic only. Explicitly does not repair the filesystem.
+set -eu
+fail() { echo "ZionOS LAB recovery denied: $*" >&2; exit 1; }
+[ "${1:-}" = --check ] || fail 'usage: zion-lab-recover --check'
+[ -e /etc/zionos-lab ] || fail 'not a ZionOS lab image'
+[ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || :)" = QEMU ] || fail 'only supported inside QEMU'
+[ -b /dev/vdb ] || fail '/dev/vdb unavailable'
+if grep -Fq /dev/vdb /proc/self/mountinfo; then fail 'unmount /dev/vdb first'; fi
+[ "$(blkid -p -s TYPE -o value /dev/vdb 2>/dev/null || :)" = ext4 ] || fail 'expected ext4 signature not found'
+command -v e2fsck >/dev/null 2>&1 || fail 'e2fsck unavailable'
+printf 'ZionOS Genesis 0.6 | ext4 integrity diagnostic (read-only, no repairs)\n'
+printf 'WARNING: this does not restore deleted or corrupted files.\n'
+set +e
+e2fsck -fn /dev/vdb
+status=$?
+set -e
+printf 'e2fsck exit status: %s\n' "$status"
+# e2fsck bit 2 = reboot needed; bit 4 = uncorrected errors; bit 8 = operational error.
+# -n can also produce status 0/1 for clean or reported inconsistencies.
+exit "$status"

@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+name="ZionOS Network Guide"
+description="Explains DHCP/network bring-up"
+depend() { need hostname; before networking; }
+start() {
+    einfo "[BOOT 3/4] Rețea: activăm eth0 și cerem automat o adresă IP prin DHCP."
+    einfo "                OpenRC va afișa imediat rezultatul configurării interfeței."
+    return 0
+}

@@ -1,0 +1,79 @@
+/build/
+/core/api/target/
+/web/desktop/node_modules/
+
+# BEGIN ZionOS repository hygiene (managed by Git/Codex setup)
+# Rust build outputs; keep Cargo.lock for reproducible binary builds.
+**/target/
+*.rs.bk
+
+# Node/Vite generated files and dependency caches.
+**/node_modules/
+**/dist/
+**/.vite/
+**/.nuxt/
+**/.cache/
+**/coverage/
+
+# ZionOS generated build directory. Source scripts live in scripts/, not build/.
+/build/
+
+# ISO, VM, disk and Alpine overlay build artifacts (any location).
+*.iso
+*.qcow2
+*.qcow2.*
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.img
+*.raw
+*.apkovl.tar.gz
+*.squashfs
+*.modloop
+*.ovl.tar.gz
+
+# Temporary logs, local backups and diagnostics.
+*.log
+*.log.*
+*.bak
+*.backup
+*.orig
+*.swp
+*.swo
+*~
+/tmp/
+/temp/
+
+# Credentials, private keys and machine-local configuration.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.rsa
+**/.abuild/
+**/.ssh/
+**/.cargo/credentials
+**/.cargo/credentials.toml
+**/id_rsa
+**/id_ed25519
+
+# Windows, macOS, editors, Python.
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# END ZionOS repository hygiene

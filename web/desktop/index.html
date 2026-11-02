@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ro" data-theme="dark" data-accent="sea">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1c27">
+  <meta name="description" content="ZionOS — personal storage, beautifully simple.">
+  <title>ZionOS — Your space, in control</title>
+  <style>
+    /* ZionOS design tokens. No CSS framework or CDN required inside the NAS. */
+    :root { color-scheme:dark; --ink:#ecf5f7; --muted:#91a8b1; --faint:#637e8b; --surface:rgba(14,33,46,.83); --surface2:rgba(23,46,58,.84); --surface3:rgba(30,55,67,.76); --edge:rgba(196,227,234,.14); --edge-strong:rgba(205,238,243,.23); --shadow:0 26px 90px rgba(1,9,20,.38),0 8px 24px rgba(0,9,15,.18); --accent:#6fe4cf; --accentDeep:#0a665c; --good:#73dec3; --bad:#ffab9f; --warn:#f3c89c; --chip:rgba(163,220,231,.10); --blur:blur(28px); --radius:20px; --desktopTop:54px; --dockBottom:22px; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    html[data-accent="blue"] { --accent:#8eb8ff; --accentDeep:#1b539c; --good:#88d7cf; }
+    html[data-accent="violet"] { --accent:#c3a2ff; --accentDeep:#6250a0; --good:#80dfbf; }
+    html[data-theme="light"] { color-scheme:light; --ink:#193540; --muted:#57717e; --faint:#80969c; --surface:rgba(245,252,255,.86); --surface2:rgba(238,248,251,.94); --surface3:rgba(223,240,247,.9); --edge:rgba(40,85,105,.15); --edge-strong:rgba(34,78,95,.25); --shadow:0 26px 70px rgba(21,50,63,.22),0 8px 20px rgba(23,50,67,.10); --chip:rgba(51,125,147,.10); --bad:#bf4f53; --good:#08765c; --warn:#9a5814; }
+    * {box-sizing:border-box;} html,body,#app { width:100%;height:100%;min-height:100%;margin:0;overflow:hidden; } body {color:var(--ink);font-size:14px; -webkit-font-smoothing:antialiased;} button,input {font:inherit} button {cursor:pointer} button:disabled {opacity:.42;cursor:not-allowed} button:focus-visible,input:focus-visible,[tabindex]:focus-visible {outline:2px solid var(--accent);outline-offset:3px} button {color:inherit} ::selection {background:rgba(111,228,207,.32)}
+    .svg {width:20px;height:20px;display:inline-block;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.75; flex:none;} .svg.big {width:25px;height:25px}.svg.small {width:16px;height:16px}.svg.tiny {width:14px;height:14px}
+    .desktop {position:relative;width:100%;height:100%;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,#081b30 0%,#123143 43%,#234b53 76%,#396b67 100%)}
+    .desktop::before {content:"";position:absolute;inset:-10%;z-index:-3;background:radial-gradient(ellipse 40% 47% at 71% 23%,rgba(128,215,206,.48),transparent 72%),radial-gradient(ellipse 45% 36% at 15% 86%,rgba(29,113,150,.52),transparent 80%),radial-gradient(ellipse 42% 45% at 50% 98%,rgba(14,53,84,.7),transparent 76%)}
+    .desktop::after {content:"";position:absolute;z-index:-2;inset:18% -10% -18%;background:linear-gradient(160deg,transparent 17%,rgba(151,227,217,.15) 40%,rgba(51,143,149,.19) 61%,rgba(4,29,57,.20) 95%);clip-path:polygon(0 57%,19% 67%,38% 48%,59% 63%,76% 29%,100% 48%,100% 100%,0 100%);filter:blur(1px);pointer-events:none;}
+    .noise {position:absolute;inset:0;z-index:-1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.20'/%3E%3C/svg%3E");opacity:.11;pointer-events:none;}
+    html[data-theme="light"] .desktop {background:linear-gradient(125deg,#d7f3f3,#c2e0e8 43%,#8bc5c7 100%)} html[data-theme="light"] .desktop::before {opacity:.65} html[data-theme="light"] .desktop::after {opacity:.42}
+    .topbar {position:absolute;z-index:100;top:0;left:0;right:0;height:var(--desktopTop);display:flex;justify-content:space-between;align-items:center;padding:0 27px;gap:18px;border-bottom:1px solid rgba(255,255,255,.1);background:rgba(7,29,40,.48);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);color:#f1fbfc;}
+    html[data-theme="light"] .topbar {background:rgba(237,249,251,.55);color:#193540;border-bottom-color:rgba(22,68,81,.12)}
+    .topbar-left,.topbar-right {display:flex;align-items:center;gap:18px;min-width:0}.brand-button {background:transparent;border:0;display:flex;align-items:center;gap:11px;padding:6px 0;font-weight:720;font-size:15px;letter-spacing:-.4px;white-space:nowrap}.brand-logo {width:29px;height:29px;border:1px solid rgba(255,255,255,.35);border-radius:9px;display:grid;place-items:center;font-size:19px;line-height:1;font-weight:780;background:linear-gradient(145deg,rgba(146,243,226,.93),rgba(58,167,181,.9));color:#10414a;box-shadow:0 4px 16px rgba(0,0,0,.10)}
+    .topbar-label {font-size:12px;opacity:.62;white-space:nowrap}.topbar-sep {height:17px;width:1px;background:currentColor;opacity:.16}.topbar-action {background:transparent;border:0;padding:8px 9px;border-radius:10px;display:flex;gap:7px;align-items:center;font-size:12px;color:inherit;white-space:nowrap}.topbar-action:hover,.brand-button:hover {background:rgba(255,255,255,.08)}.status-bead {height:7px;width:7px;border-radius:100%;background:var(--warn);box-shadow:0 0 13px rgba(242,201,140,.5)}.status-bead.online {background:#84ebc9;box-shadow:0 0 12px rgba(132,235,201,.75)}.status-bead.offline {background:#ff968e}
+    .clock {font-variant-numeric:tabular-nums;font-size:12px;opacity:.9;white-space:nowrap}
+    .desktop-icons {position:absolute;top:88px;left:30px;display:flex;flex-direction:column;gap:20px;z-index:2}.desktop-icon {width:98px;display:flex;flex-direction:column;align-items:center;gap:9px;padding:11px 5px;border:1px solid transparent;background:transparent;border-radius:15px;text-align:center;color:#f7feff;text-shadow:0 2px 10px rgba(0,0,0,.3);font-size:12px;line-height:1.3}.desktop-icon:hover,.desktop-icon:focus-visible {background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)}.icon-tile {height:49px;width:49px;display:grid;place-items:center;border-radius:15px;border:1px solid rgba(255,255,255,.35);box-shadow:0 9px 18px rgba(5,22,29,.19);color:white}.icon-tile .svg{width:25px;height:25px}.tile-storage{background:linear-gradient(135deg,#8cc5f6,#4e85bc)}.tile-files{background:linear-gradient(135deg,#ffcd97,#d99969)}.tile-activity{background:linear-gradient(135deg,#8fe0c0,#26a896)}.tile-settings{background:linear-gradient(135deg,#a5a8cf,#61769e)}.tile-network{background:linear-gradient(135deg,#b3a5f5,#7866bb)}.tile-about{background:linear-gradient(135deg,#bedbe8,#6e9fb9)}
+    .welcome {position:absolute;top:calc(50% - 155px);left:50%;transform:translate(-50%,-50%);width:min(530px,calc(100vw - 240px));text-align:center;pointer-events:none;z-index:1;color:#edffff;text-shadow:0 2px 24px rgba(14,46,60,.17)}.welcome .eyebrow {font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:780;opacity:.72}.welcome h1 {font-size:clamp(35px,4vw,55px);letter-spacing:-2.8px;font-weight:670;line-height:1.08;margin:14px 0 12px}.welcome p{opacity:.75;font-size:14px;font-weight:430;line-height:1.55;margin:0}
+    .dock-shell {position:absolute;bottom:var(--dockBottom);left:50%;transform:translateX(-50%);z-index:90;max-width:calc(100vw - 24px)}.dock {display:flex;align-items:center;gap:7px;padding:8px;border:1px solid rgba(255,255,255,.24);background:rgba(11,37,50,.64);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:0 20px 50px rgba(0,15,28,.22);border-radius:21px;color:#f5fdff}.dock-button{position:relative;width:52px;height:52px;display:grid;place-items:center;border:0;border-radius:14px;background:transparent;transition:background .2s,transform .2s}.dock-button:hover {background:rgba(255,255,255,.16);transform:translateY(-4px)}.dock-button.active:after {content:"";position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:#9cf6e5}.dock-button .svg {width:23px;height:23px}.dock-separator {height:30px;width:1px;background:rgba(255,255,255,.23);margin:0 2px}.dock-button.launcher {background:rgba(180,242,229,.21)}.dock-label {position:absolute;top:-35px;background:rgba(10,33,44,.92);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:5px 9px;white-space:nowrap;font-size:11px;opacity:0;pointer-events:none}.dock-button:hover .dock-label,.dock-button:focus-visible .dock-label {opacity:1}
+    .badge {display:inline-flex;align-items:center;gap:7px;border-radius:99px;background:var(--chip);border:1px solid var(--edge);padding:6px 10px;font-size:11px;color:var(--muted);font-weight:570}.badge .status-bead {width:6px;height:6px;flex:none}
+    .os-window {position:absolute;z-index:20;top:104px;left:calc(50% - 410px);width:820px;height:min(580px,calc(100vh - 210px));min-height:360px;max-width:calc(100vw - 44px);display:flex;flex-direction:column;overflow:hidden;border-radius:21px;border:1px solid var(--edge-strong);background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--ink);transition:box-shadow .15s}.os-window:not(.focused) {filter:saturate(.85);box-shadow:0 15px 45px rgba(0,9,18,.22)}.os-window.minimized {display:none}.os-window.maximized {top:var(--desktopTop)!important;left:0!important;width:100vw!important;height:calc(100vh - var(--desktopTop))!important;max-width:none;border-radius:0;}
+    .window-header {display:flex;align-items:center;height:57px;padding:0 18px 0 21px;gap:11px;flex:none;border-bottom:1px solid var(--edge);background:rgba(255,255,255,.025);touch-action:none;user-select:none;cursor:grab}.window-header:active {cursor:grabbing}.window-header .svg {color:var(--accent)}.window-title {flex:1;font-weight:670;letter-spacing:-.2px;font-size:13px}.window-subtitle {color:var(--faint);font-size:11px;margin-right:7px}.window-controls {display:flex;gap:7px;align-items:center}.win-control {display:grid;place-items:center;border:1px solid transparent;border-radius:9px;width:30px;height:28px;background:transparent;color:var(--muted)}.win-control:hover {background:var(--chip);border-color:var(--edge)}.win-control.close:hover {background:rgba(245,114,116,.18);color:#ffaaa6}.window-body {min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;padding:26px 30px 30px}.window-body::-webkit-scrollbar {width:7px}.window-body::-webkit-scrollbar-thumb {background:var(--edge-strong);border-radius:6px}
+    .window-heading {display:flex;align-items:start;justify-content:space-between;gap:15px;margin-bottom:23px}.window-heading h2 {font-size:23px;letter-spacing:-.8px;line-height:1.25;margin:0 0 6px;font-weight:680}.window-heading p {color:var(--muted);font-size:12px;margin:0;line-height:1.5}.mini-overline {text-transform:uppercase;letter-spacing:.16em;font-size:10px;font-weight:730;color:var(--accent);margin-bottom:8px}.section-title {display:flex;align-items:center;justify-content:space-between;margin:25px 0 11px;gap:12px}.section-title h3{font-size:13px;font-weight:690;letter-spacing:-.2px;margin:0}.overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.metric-card,.panel {border:1px solid var(--edge);border-radius:15px;background:var(--surface2)}.metric-card{padding:17px 17px 15px;min-width:0}.metric-card .label {font-size:11px;color:var(--muted);font-weight:560;display:flex;align-items:center;justify-content:space-between;gap:5px}.metric-card .value {font-size:27px;letter-spacing:-.9px;margin:12px 0 6px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.metric-card .detail {font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meter {height:5px;border-radius:9px;background:var(--chip);margin-top:16px;overflow:hidden}.meter-fill {height:100%;width:0;background:linear-gradient(90deg,var(--accentDeep),var(--accent));transition:width .35s;border-radius:9px}.panel{padding:17px 19px}.panel-title {font-size:13px;font-weight:650;margin:0 0 12px}.sys-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sys-item {display:flex;justify-content:space-between;gap:15px;align-items:center;min-width:0;padding:9px 0;border-bottom:1px solid var(--edge);font-size:12px}.sys-item:nth-last-child(-n+2){border-bottom:0}.sys-item span:first-child {color:var(--muted)}.sys-item span:last-child {text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:67%;font-weight:610}
+    .disk-list {display:flex;flex-direction:column;gap:10px}.disk-row {display:flex;align-items:center;gap:13px;padding:14px 16px;border:1px solid var(--edge);border-radius:13px;background:var(--surface2)}.disk-icon {width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:var(--chip);color:var(--accent)}.disk-details {flex:1;min-width:0}.disk-name{font-weight:690;font-size:13px}.disk-meta {margin-top:4px;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.disk-size{text-align:right;font-size:13px;font-weight:680;white-space:nowrap}.disk-state {font-size:10px;color:var(--muted);font-weight:500;margin-top:5px}.empty-state {padding:46px 12px;text-align:center;color:var(--muted);border:1px dashed var(--edge-strong);border-radius:14px}.empty-state .svg {width:32px;height:32px;color:var(--accent);margin-bottom:12px}.empty-state h3 {font-size:15px;color:var(--ink);font-weight:660;margin:0 0 6px}.empty-state p {font-size:12px;line-height:1.65;max-width:340px;margin:0 auto}.notice {display:flex;align-items:flex-start;gap:11px;border:1px solid var(--edge);border-radius:13px;padding:14px 16px;color:var(--muted);background:var(--chip);font-size:12px;line-height:1.6}.notice .svg {color:var(--accent)}
+    .file-toolbar {display:flex;gap:9px;align-items:center;padding:12px 14px;margin-bottom:16px;border:1px solid var(--edge);border-radius:12px;background:var(--surface2);font-size:12px;color:var(--muted)}.file-path{flex:1}.secondary-button {background:var(--chip);border:1px solid var(--edge);padding:9px 12px;border-radius:10px;font-size:12px;display:inline-flex;align-items:center;gap:8px}.secondary-button:hover {border-color:var(--edge-strong);background:var(--surface3)}
+    .setting-row {display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 0;border-bottom:1px solid var(--edge)}.setting-row:last-child{border-bottom:0}.setting-label {font-size:13px;font-weight:640}.setting-hint {color:var(--muted);font-size:11px;margin-top:4px;line-height:1.45}.segmented {display:flex;align-items:center;gap:3px;padding:4px;border-radius:11px;background:var(--chip);border:1px solid var(--edge)}.segmented button {border:0;background:transparent;border-radius:8px;padding:8px 12px;font-size:11px;white-space:nowrap}.segmented button.selected{background:var(--surface3);box-shadow:0 2px 7px rgba(0,0,0,.07);font-weight:680}.accent-options {display:flex;gap:8px}.accent-dot{width:27px;height:27px;border-radius:50%;border:2px solid transparent;background:var(--dot);outline:1px solid var(--edge);outline-offset:1px}.accent-dot.selected{border-color:var(--surface);outline:2px solid var(--ink)}
+    .activity-chart {width:100%;height:148px;display:block;margin-top:10px;overflow:visible}.activity-chart .gridline {stroke:var(--edge);stroke-width:1;stroke-dasharray:2 5}.activity-chart .line {stroke:var(--accent);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.activity-chart .area {fill:var(--accent);fill-opacity:.09}.stats-split {display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:16px}.info-label {font-size:11px;color:var(--muted)}.info-value {font-size:20px;letter-spacing:-.5px;font-weight:720;margin-top:5px}.about-logo {width:64px;height:64px;display:grid;place-items:center;border-radius:21px;background:linear-gradient(135deg,#84e2d2,#438ea5);color:#0b3540;font-weight:800;font-size:40px;box-shadow:0 14px 27px rgba(0,25,37,.2);margin-bottom:19px}
+    .launcher-overlay {position:absolute;inset:var(--desktopTop) 0 0;z-index:70;background:rgba(4,19,26,.25);backdrop-filter:blur(12px);display:none;align-items:flex-start;justify-content:center;padding:10vh 18px 20px}.launcher-overlay.open {display:flex}.launcher-panel {width:min(560px,100%);border:1px solid var(--edge-strong);border-radius:23px;background:var(--surface);box-shadow:var(--shadow);padding:23px;backdrop-filter:blur(38px)}.launcher-search {display:flex;align-items:center;gap:10px;border:1px solid var(--edge);background:var(--surface2);border-radius:13px;padding:12px 14px}.launcher-search input {color:var(--ink);min-width:0;width:100%;outline:none;border:0;background:transparent;font-size:14px}.launcher-search input::placeholder {color:var(--faint)}.launcher-panel .mini-overline {margin:20px 0 12px}.launcher-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.launcher-app {display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;padding:14px 4px;border:1px solid transparent;border-radius:13px;background:none;font-size:12px;color:var(--ink)}.launcher-app:hover,.launcher-app:focus-visible{background:var(--chip);border-color:var(--edge)}.launcher-app .icon-tile {width:46px;height:46px}
+    .toast {position:absolute;right:25px;bottom:109px;z-index:95;max-width:380px;display:none;gap:11px;padding:13px 16px;border-radius:13px;background:var(--surface);border:1px solid var(--edge-strong);box-shadow:var(--shadow);backdrop-filter:var(--blur);font-size:12px}.toast.show {display:flex}.toast .svg {color:var(--accent)}
+    .desktop-hint {position:absolute;left:35px;bottom:33px;color:rgba(238,255,253,.65);font-size:11px;letter-spacing:.02em;z-index:1}.desktop-hint span{opacity:.68}
+    @media (max-width:940px) {.topbar{padding:0 16px}.topbar-label,.topbar-sep{display:none}.os-window{left:10%!important;width:80%!important}.welcome{top:33%;width:min(480px,calc(100vw - 140px))}.desktop-icons{left:12px}}
+    @media (max-width:700px) {.topbar{padding:0 11px}.topbar-left,.topbar-right {gap:5px}.topbar-action .action-label{display:none}.clock {font-size:11px}.brand-button{font-size:13px}.brand-logo{width:25px;height:25px}.desktop-icons{top:83px;left:9px;gap:6px;display:grid;grid-template-columns:repeat(2,92px)}.desktop-icon{width:83px;padding:7px 2px;font-size:10px}.icon-tile{width:40px;height:40px;border-radius:13px}.icon-tile .svg{width:21px;height:21px}.welcome{top:47%;width:calc(100% - 44px)}.welcome h1{font-size:37px}.welcome p{font-size:12px}.dock-shell{width:calc(100% - 15px);bottom:12px}.dock{justify-content:center;gap:2px;padding:6px;border-radius:18px}.dock-button{width:44px;height:46px}.dock-button .svg {width:20px;height:20px}.os-window,.os-window.maximized {position:absolute!important;top:var(--desktopTop)!important;left:0!important;width:100vw!important;max-width:none!important;height:calc(100% - var(--desktopTop) - 64px)!important;min-height:0;border-radius:0;}.window-body{padding:21px 16px}.window-subtitle{display:none}.window-header{height:51px}.overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.metric-card{padding:13px}.metric-card .value{font-size:22px}.sys-summary {grid-template-columns:1fr}.sys-item:nth-last-child(2){border-bottom:1px solid var(--edge)}.setting-row{align-items:start;flex-direction:column}.desktop-hint{display:none}.launcher-overlay{padding-top:7vh}.launcher-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (prefers-reduced-motion:reduce) {*,*:before,*:after {animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}} html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after {animation-duration:.01ms!important;transition-duration:.01ms!important}
+
+    /* Genesis 0.5 — storage application */
+    .storage-totals {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:19px 0 21px}
+    .storage-total {border:1px solid var(--edge);background:var(--surface2);border-radius:14px;padding:15px 16px;min-width:0}
+    .storage-total .caption {font-size:11px;color:var(--muted);margin-bottom:8px}
+    .storage-total .value {font-size:23px;font-weight:720;letter-spacing:-.8px}
+    .storage-total .sub {font-size:11px;color:var(--muted);margin-top:5px}
+    .storage-layout {display:grid;grid-template-columns:minmax(200px,.94fr) minmax(0,1.4fr);gap:13px;min-height:255px}
+    .storage-device-panel,.storage-detail-panel {border:1px solid var(--edge);border-radius:15px;background:var(--surface2);padding:11px;min-width:0}
+    .storage-device-list {display:flex;flex-direction:column;gap:7px}
+    .storage-device {width:100%;display:flex;align-items:center;gap:11px;text-align:left;border:1px solid transparent;border-radius:11px;background:transparent;padding:12px;min-width:0}
+    .storage-device:hover {background:var(--surface3)}
+    .storage-device.selected {background:var(--surface3);border-color:var(--edge-strong)}
+    .storage-device .device-icon {width:38px;height:38px;border-radius:11px;background:var(--chip);display:grid;place-items:center;color:var(--accent);flex-shrink:0}
+    .storage-device .device-main {display:flex;flex-direction:column;min-width:0;flex:1;gap:3px}
+    .storage-device .device-name {font-weight:680;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .storage-device .device-sub {color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .storage-device .device-size {font-size:11px;font-weight:670;white-space:nowrap}
+    .storage-detail-panel {padding:19px}
+    .storage-detail-title {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .storage-detail-title h3 {margin:0 0 5px;font-size:17px;letter-spacing:-.35px}
+    .storage-detail-title p {margin:0;color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+    .storage-pill {font-size:10px;font-weight:680;padding:6px 9px;border:1px solid var(--edge);border-radius:99px;background:var(--chip);white-space:nowrap}
+    .storage-pill.ok {color:var(--good)} .storage-pill.warn {color:var(--warn)} .storage-pill.danger {color:var(--bad)}
+    .storage-kv {display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid var(--edge);padding:12px 0}
+    .storage-kv .k {font-size:11px;color:var(--muted)} .storage-kv .v {font-size:12px;font-weight:600;overflow-wrap:anywhere;text-align:right}
+    .storage-part-label {font-size:11px;font-weight:680;margin:17px 0 9px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+    .storage-part {padding:10px 12px;margin-top:7px;border:1px solid var(--edge);background:var(--surface3);border-radius:11px}
+    .storage-part-top {display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:650}
+    .storage-part-sub {font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5;overflow-wrap:anywhere}
+    .storage-mounted-list {display:grid;gap:9px}
+    .storage-volume {border:1px solid var(--edge);background:var(--surface2);border-radius:12px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .storage-volume-title {font-size:12px;font-weight:660;overflow-wrap:anywhere}
+    .storage-volume-desc {font-size:11px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+    .storage-volume-size {font-size:12px;text-align:right;white-space:nowrap}
+    .storage-volume-meter {height:5px;border-radius:9px;background:var(--chip);margin-top:7px;min-width:105px;overflow:hidden}
+    .storage-volume-meter>span {display:block;height:100%;background:var(--accent);border-radius:9px}
+    .storage-footnote,.storage-empty {font-size:12px;color:var(--muted);line-height:1.6;padding:12px 2px}
+    @media(max-width:760px){.storage-layout{grid-template-columns:1fr}.storage-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.storage-totals .storage-total:last-child{grid-column:span 2}}
+
+  /* Genesis 0.5: pools, volumes and non-destructive planning */
+  .pool-section-title{margin-top:28px}.pool-beta{font-size:9px;font-weight:750;letter-spacing:.09em;color:var(--accent);margin-left:8px}
+  .pool-list,.pool-volume-list{display:grid;gap:10px}
+  .pool-card,.pool-volume-card{border:1px solid var(--edge);border-radius:15px;background:var(--surface2);padding:16px 17px;min-width:0}
+  .pool-card-top,.pool-volume-top{display:flex;align-items:start;justify-content:space-between;gap:12px}
+  .pool-card h4,.pool-volume-card h4{font-size:13px;letter-spacing:-.2px;margin:0 0 5px}
+  .pool-card p,.pool-volume-card p{font-size:11px;color:var(--muted);line-height:1.55;margin:0;overflow-wrap:anywhere}
+  .pool-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .pool-chip{padding:5px 8px;background:var(--chip);border:1px solid var(--edge);font-size:10px;border-radius:8px;color:var(--muted)}
+  .pool-state{font-size:11px;font-weight:660;color:var(--accent);white-space:nowrap}
+  .pool-state.danger{color:var(--bad)}.pool-state.warning{color:var(--warn)}
+  .pool-volume-usage{height:6px;overflow:hidden;border-radius:100px;background:var(--chip);margin-top:13px}
+  .pool-volume-usage>span{display:block;height:100%;background:var(--accent);border-radius:100px}
+  .pool-plan-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .pool-plan-heading h3{font-size:20px;letter-spacing:-.5px;margin:7px 0 5px}.pool-plan-heading p{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
+  .pool-planner{margin-top:23px;border:1px solid var(--edge-strong);padding:21px;border-radius:18px;background:var(--surface2)}
+  .pool-plan-kinds{display:flex;gap:7px;margin:17px 0 13px;flex-wrap:wrap}
+  .pool-plan-kinds button{border:1px solid var(--edge);background:var(--chip);padding:9px 15px;border-radius:10px;font-size:12px}
+  .pool-plan-kinds button.active{border-color:var(--accent);color:var(--accent);background:var(--surface3)}
+  .pool-disk-selector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .pool-check{display:flex;gap:9px;align-items:center;padding:12px;border-radius:11px;border:1px solid var(--edge);background:var(--surface3);cursor:pointer;min-width:0}
+  .pool-check span{display:flex;flex-direction:column;min-width:0;gap:3px}.pool-check strong{font-size:11px}.pool-check small{color:var(--muted);font-size:10px;overflow-wrap:anywhere}
+  .pool-check input{accent-color:var(--accent)}.pool-plan-result{margin:15px 0 12px;padding:14px 15px;background:var(--chip);border-radius:12px;font-size:12px;line-height:1.6}
+  .pool-plan-result strong{font-size:17px;display:block;margin-bottom:4px}.pool-plan-copy{margin-top:1px}
+  @media(max-width:760px){.pool-disk-selector{grid-template-columns:1fr}.pool-plan-heading{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-hard-drive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="7.5" cy="17" r=".65" fill="currentColor" stroke="none"/><path d="M13 17h4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5a2 2 0 0 1 2-2h5l2.2 2.3H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M2 12h4l3-7 5 14 3-7h5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 3.3v2m0 13.4v2M3.3 12h2m13.4 0h2M5.8 5.8l1.5 1.5m9.4 9.4 1.5 1.5M18.2 5.8l-1.5 1.5m-9.4 9.4-1.5 1.5"/><circle cx="12" cy="12" r="4.4"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M12 7v4M12 11l-7 5M12 11l7 5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 20 6v5.5c0 4.2-2.8 7.6-8 10-5.2-2.4-8-5.8-8-10V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 9a7 7 0 0 1 12-2l2 5M4 12l2 5a7 7 0 0 0 12-2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  </svg>
+  <div id="app" class="desktop">
+    <div class="noise"></div>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="brand-button" id="brand-launcher" aria-label="Deschide lansatorul de aplicații"><span class="brand-logo">Z</span> ZionOS</button>
+        <div class="topbar-sep"></div><span class="topbar-label">Genesis · Personal cloud workspace</span>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-action" id="quick-search" title="Caută aplicații (Ctrl+K)"><svg class="svg small"><use href="#i-search"/></svg><span class="action-label">Caută</span></button>
+        <button class="topbar-action" id="connection-button" title="Stare Zion Core"><span class="status-bead" id="system-led"></span><span class="action-label" id="connection-label">Conectare...</span></button>
+        <button class="topbar-action" id="theme-toggle" title="Schimbă tema"><svg class="svg small"><use href="#i-moon"/></svg></button>
+        <span class="clock" id="clock">—</span>
+      </div>
+    </header>
+    <div class="desktop-icons" id="desktop-icons" aria-label="Aplicații desktop"></div>
+    <div class="welcome" id="welcome"><div class="eyebrow">WELCOME TO YOUR SPACE</div><h1>Your data.<br>Your universe.</h1><p>Un spațiu calm pentru datele și dispozitivele tale.<br>Tot ce contează, sub controlul tău.</p></div>
+    <div class="desktop-hint">ZionOS <span>Genesis 0.5 · storage discovery</span></div>
+    <div id="window-layer" aria-label="Ferestrele aplicațiilor"></div>
+    <div class="launcher-overlay" id="launcher-overlay" aria-hidden="true">
+      <div class="launcher-panel" role="dialog" aria-modal="true" aria-label="Aplicații ZionOS">
+        <div class="launcher-search"><svg class="svg small"><use href="#i-search"/></svg><input type="search" id="launcher-input" placeholder="Caută o aplicație..." autocomplete="off" aria-label="Caută aplicații"><span style="font-size:10px;color:var(--muted)">ESC</span></div>
+        <div class="mini-overline">APLICAȚII</div><div class="launcher-grid" id="launcher-grid"></div>
+      </div>
+    </div>
+    <nav class="dock-shell" aria-label="Dock aplicații"><div class="dock" id="dock"></div></nav>
+    <div class="toast" id="toast" role="status" aria-live="polite"><svg class="svg small"><use href="#i-info"/></svg><span id="toast-text"></span></div>
+  </div>
+  <!-- Windows are DOM templates. Data from /api/metrics is only inserted with textContent. -->
+  <template id="tpl-overview">
+    <div class="window-heading"><div><div class="mini-overline">SYSTEM OVERVIEW</div><h2>O privire de ansamblu.</h2><p>Performanța dispozitivului tău, în timp real.</p></div><span class="badge"><span class="status-bead" data-bind="led"></span><span data-bind="health">Se conectează</span></span></div>
+    <div class="overview-grid">
+      <div class="metric-card"><div class="label">Utilizare CPU <svg class="svg tiny"><use href="#i-activity"/></svg></div><div class="value" data-bind="cpu">—</div><div class="detail" data-bind="cores">Nuclee</div><div class="meter"><div class="meter-fill" data-meter="cpu"></div></div></div>
+      <div class="metric-card"><div class="label">Memorie utilizată <svg class="svg tiny"><use href="#i-grid"/></svg></div><div class="value" data-bind="ram">—</div><div class="detail" data-bind="ramdetail">RAM disponibil</div><div class="meter"><div class="meter-fill" data-meter="ram"></div></div></div>
+      <div class="metric-card"><div class="label">Timp de funcționare <svg class="svg tiny"><use href="#i-clock"/></svg></div><div class="value" data-bind="uptime">—</div><div class="detail">De la ultima pornire</div><div class="meter"><div class="meter-fill" style="width:100%;opacity:.3"></div></div></div>
+    </div>
+    <div class="section-title"><h3>Dispozitiv</h3><span class="badge">Read-only monitoring</span></div>
+    <div class="panel sys-summary"><div class="sys-item"><span>Hostname</span><span data-bind="hostname">—</span></div><div class="sys-item"><span>Kernel</span><span data-bind="kernel">—</span></div><div class="sys-item"><span>Procesor</span><span data-bind="cpumodel">—</span></div><div class="sys-item"><span>Arhitectură</span><span data-bind="arch">—</span></div></div>
+    <div class="section-title"><h3>Stocare conectată</h3><button class="secondary-button" data-open="storage">Deschide Storage Manager <svg class="svg tiny"><use href="#i-arrow"/></svg></button></div>
+    <div class="panel" data-bind="overview-disks">Se încarcă...</div>
+  </template>
+  <template id="tpl-storage">
+    <div class="window-heading"><div><div class="mini-overline">ZION STORAGE MANAGER · GENESIS 0.6</div><h2>Discurile tale, în detaliu.</h2><p>Dispozitive, partiții, volume montate și diagnostic SMART.</p></div><span class="badge">Read-only</span></div>
+    <div class="notice"><svg class="svg small"><use href="#i-shield"/></svg><span>Mod observație: fără formatare, montare, repartitionare sau operații de scriere. SMART poate fi indisponibil în QEMU.</span></div>
+    <div class="storage-totals" data-storage-totals><div class="storage-empty">Se citesc dispozitivele…</div></div>
+    <div class="section-title"><h3>Dispozitive fizice și logice</h3><button class="secondary-button" data-storage-refresh="1"><svg class="svg small"><use href="#i-refresh"/></svg> Actualizează</button></div>
+    <div class="storage-layout">
+      <div class="storage-device-panel"><div class="storage-device-list" data-storage-list><div class="storage-empty">Se încarcă inventarul…</div></div></div>
+      <div class="storage-detail-panel" data-storage-detail><div class="storage-empty">Selectează un disc pentru detalii.</div></div>
+    </div>
+    <div class="section-title"><h3>Volume montate</h3><span class="badge" data-storage-mount-count>—</span></div>
+    <div class="storage-mounted-list" data-storage-mounts><div class="storage-empty">Se încarcă…</div></div>
+    <div class="section-title pool-section-title"><h3>Storage Pools <span class="pool-beta">GENESIS 0.6</span></h3><button class="secondary-button" data-pool-refresh="1"><svg class="svg small"><use href="#i-refresh"/></svg> Rescanează</button></div>
+    <div class="pool-list" data-pool-list><div class="storage-empty">Detectăm RAID și Btrfs…</div></div>
+    <div class="section-title"><h3>Volume descoperite</h3><span class="badge" data-volume-count>—</span></div>
+    <div class="pool-volume-list" data-pool-volumes><div class="storage-empty">Se caută volumele…</div></div>
+    <div class="pool-planner">
+      <div class="pool-plan-heading"><div><div class="mini-overline">CAPACITY LAB · SIMULATION ONLY</div><h3>Planifică un pool.</h3><p>Compară estimări de capacitate fără să scrii pe discuri.</p></div><span class="storage-pill warn">Nicio operație pe disc</span></div>
+      <div class="pool-plan-kinds" role="group" aria-label="Aranjament de stocare">
+        <button type="button" data-plan-layout="single" class="active" aria-pressed="true">Single</button>
+        <button type="button" data-plan-layout="mirror" aria-pressed="false">Mirror</button>
+        <button type="button" data-plan-layout="raid5" aria-pressed="false">RAID5</button>
+      </div>
+      <div class="pool-disk-selector" data-plan-disks><div class="storage-empty">Se încarcă dispozitivele…</div></div>
+      <div class="pool-plan-result" data-plan-result role="status" aria-live="polite">Alege un layout și discurile pentru simulare.</div>
+      <button type="button" class="secondary-button pool-plan-copy" data-plan-copy="1" disabled>Copiază rezumatul simulării</button>
+      <p class="storage-footnote">Estimare teoretică, nu verificare de eligibilitate. Un disc fără partiții detectate poate conține date. Crearea de pooluri reale rămâne blocată în web; Genesis 0.6 permite doar un ext4 pe un disc virtual separat, în consola QEMU.</p>
+    </div>
+
+    <div class="section-title"><h3>Provisioning Lab <span class="pool-beta">GENESIS 0.6</span></h3><button type="button" class="secondary-button" data-lab-refresh>Verifică lab-ul</button></div>
+    <div class="notice"><svg class="svg small"><use href="#i-shield"/></svg><span>Protecție: interfața web nu formatează și nu montează discuri. Provisioning este disponibil numai din consola VM QEMU, pe /dev/vdb — discul virtual de laborator.</span></div>
+    <div class="pool-planner" style="margin-top:13px">
+      <div class="pool-plan-heading"><div><div class="mini-overline">DISPOSABLE QEMU DISK ONLY</div><h3>Pregătește un volum de test.</h3><p>Inspecție, validare și creare ext4 doar după confirmare la consola VM.</p></div><span class="storage-pill warn">CLI only</span></div>
+      <div class="storage-totals" data-lab-totals style="margin-bottom:13px"><div class="storage-empty">Se verifică starea laboratorului…</div></div>
+      <div class="pool-list" data-lab-reasons></div>
+      <div class="pool-plan-result" style="white-space:pre-wrap;overflow-wrap:anywhere" data-lab-commands>Pornește QEMU în modul lab și rulează comenzile afișate.</div>
+      <button type="button" class="secondary-button" data-lab-copy>Copie comenzi de diagnostic</button>
+    </div>
+    <div class="section-title"><h3>Recovery Center</h3><span class="badge">Diagnostic · read-only</span></div>
+    <div class="pool-card" data-lab-recovery><p>Se încarcă pașii de diagnosticare…</p></div>
+    <div class="storage-footnote" data-storage-message>Informațiile reflectă sistemul în care rulează Zion Core; pot fi limitate în WSL și QEMU.</div>
+  </template>
+  <template id="tpl-files">
+    <div class="window-heading"><div><div class="mini-overline">FILE STATION</div><h2>Fișierele tale.</h2><p>Viitorul explorator de fișiere ZionOS.</p></div><span class="badge">Preview</span></div>
+    <div class="file-toolbar"><svg class="svg small"><use href="#i-folder"/></svg><span class="file-path">ZionOS / Shared files</span><button class="secondary-button" disabled aria-label="Creează folder indisponibil">Folder nou</button></div>
+    <div class="empty-state" style="margin-top:23px"><svg class="svg"><use href="#i-folder"/></svg><h3>File Station vine în curând</h3><p>Nu afișăm fișiere inventate. Această aplicație va deveni funcțională după implementarea unui API securizat, cu permisiuni și autentificare.</p></div>
+  </template>
+  <template id="tpl-network">
+    <div class="window-heading"><div><div class="mini-overline">CONNECTIONS</div><h2>Rețea și conexiuni.</h2><p>Starea conexiunii dintre browser și Zion Core.</p></div><span class="badge"><span class="status-bead" data-bind="led"></span><span data-bind="health">—</span></span></div>
+    <div class="panel sys-summary"><div class="sys-item"><span>Endpoint API</span><span data-bind="origin">—</span></div><div class="sys-item"><span>Serviciu</span><span>zion-core</span></div><div class="sys-item"><span>Hostname sistem</span><span data-bind="hostname">—</span></div><div class="sys-item"><span>Reîmprospătare</span><span>5 secunde</span></div></div>
+    <div class="section-title"><h3>Conectivitate</h3></div><div class="notice"><svg class="svg small"><use href="#i-info"/></svg><span>Adresa afișată este endpointul din browser, nu IP-ul fizic al NAS-ului. Configurarea IP, DHCP și a interfețelor va avea propriul API într-o versiune viitoare.</span></div>
+  </template>
+  <template id="tpl-activity">
+    <div class="window-heading"><div><div class="mini-overline">ACTIVITY MONITOR</div><h2>Totul curge liniștit.</h2><p>Utilizarea CPU, eșantionată la fiecare 5 secunde.</p></div><span class="badge">Live</span></div>
+    <div class="panel"><div class="section-title" style="margin:0 0 2px"><h3>CPU history</h3><span class="badge" data-bind="cpu">—</span></div>
+      <svg viewBox="0 0 600 150" preserveAspectRatio="none" class="activity-chart" aria-label="Grafic utilizare CPU"><path class="gridline" d="M0 35H600M0 75H600M0 115H600"/><path class="area" data-chart="area" d=""/><polyline class="line" data-chart="line" points=""/></svg>
+      <div class="sys-item" style="border-bottom:0"><span>Ultimele 60 de eșantioane · aproximativ 5 minute</span><span>0–100%</span></div></div>
+    <div class="stats-split"><div class="metric-card"><div class="label">CPU</div><div class="info-value" data-bind="cpu">—</div><div class="detail" data-bind="cpumodel">—</div></div><div class="metric-card"><div class="label">RAM</div><div class="info-value" data-bind="ram">—</div><div class="detail" data-bind="ramdetail">—</div></div></div>
+  </template>
+  <template id="tpl-settings">
+    <div class="window-heading"><div><div class="mini-overline">PERSONALIZATION</div><h2>Un spațiu pe gustul tău.</h2><p>Preferințele sunt salvate în browserul actual.</p></div></div>
+    <div class="setting-row"><div><div class="setting-label">Aspect</div><div class="setting-hint">Un mod luminos și unul întunecat, ambele cu contrast ridicat.</div></div><div class="segmented"><button data-theme-choice="dark">Întunecat</button><button data-theme-choice="light">Luminos</button></div></div>
+    <div class="setting-row"><div><div class="setting-label">Culoare de accent</div><div class="setting-hint">O singură culoare, folosită discret în interfață.</div></div><div class="accent-options"><button class="accent-dot" data-accent-choice="sea" style="--dot:#6fe4cf" aria-label="Verde marin" title="Verde marin"></button><button class="accent-dot" data-accent-choice="blue" style="--dot:#8eb8ff" aria-label="Albastru" title="Albastru"></button><button class="accent-dot" data-accent-choice="violet" style="--dot:#c3a2ff" aria-label="Violet" title="Violet"></button></div></div>
+    <div class="setting-row"><div><div class="setting-label">Reducerea animațiilor</div><div class="setting-hint">Respectă preferința sistemului, cu opțiune suplimentară.</div></div><div class="segmented"><button data-motion-choice="normal">Normal</button><button data-motion-choice="reduced">Redus</button></div></div>
+    <div class="section-title"><h3>Protecția sistemului</h3></div><div class="notice"><svg class="svg small"><use href="#i-lock"/></svg><span>Genesis 0.6 nu are încă autentificare. Ține portul 8080 accesibil doar local, prin QEMU. Setările vizuale nu schimbă configurația de securitate a NAS-ului.</span></div>
+  </template>
+  <template id="tpl-about">
+    <div class="about-logo">Z</div><div class="mini-overline">ZIONOS GENESIS</div><h2 style="font-size:27px;margin:7px 0 9px;letter-spacing:-1px">Your space, in control.</h2><p style="max-width:440px;color:var(--muted);font-size:13px;line-height:1.7">Un sistem de operare NAS proiectat pentru a da o nouă viață hardware-ului tău. Această ediție este un prototip de monitorizare read-only.</p>
+    <div class="section-title"><h3>Informații sistem</h3></div><div class="panel sys-summary"><div class="sys-item"><span>Versiune shell</span><span>Genesis 0.6</span></div><div class="sys-item"><span>Zion Core</span><span data-bind="api-version">—</span></div><div class="sys-item"><span>Arhitectură</span><span data-bind="arch">—</span></div><div class="sys-item"><span>Kernel</span><span data-bind="kernel">—</span></div></div>
+  </template>
+  <script src="/app.js" defer></script>
+</body>
+</html>
