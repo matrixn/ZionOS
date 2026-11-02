@@ -1,5 +1,6 @@
 //! ZPK v1: typed declarations and bounded inspection. Never extracts or executes packages.
 pub mod archive;
+pub mod desktop;
 pub mod manifest;
 
 pub use archive::{inspect, Inspection, Limits};

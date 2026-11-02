@@ -14,7 +14,18 @@ zpk logs ID --stderr\nzpk repair --plan ID\n\
 LIST is comma-separated manifest permissions; use 'none' for an empty set.\n\
 Unsigned packages are trusted local development only. Hashes do not authenticate publishers.\n\
 Uninstall preserves data/config/logs and locked identities. Data deletion is not implemented.\n\
+zpk desktop enable|disable ID\n\
 Forge remains available via its existing crate; a separately installed /usr/local/libexec/zpk-forge may serve 'zpk forge'.";
+fn target() -> Result<Manager<Alpine>> {
+    if unsafe { libc::geteuid() } != 0
+        || !Path::new("/etc/alpine-release").is_file()
+        || !Path::new("/etc/zionos-release").is_file()
+        || !Path::new("/sbin/openrc-run").is_file()
+    {
+        return fail("manager administration is only supported by root on the target Alpine/ZionOS system; never deploy packages on the Windows/WSL developer host");
+    }
+    Manager::open(Path::new("/"), Environment::Persistent, Alpine)
+}
 fn execute() -> Result<()> {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args == ["--help"] {
@@ -34,6 +45,24 @@ fn execute() -> Result<()> {
         {
             return fail("Forge failed");
         }
+        return Ok(());
+    }
+    if args[0] == "desktop" {
+        if args.len() != 3
+            || !["enable", "disable"].contains(&args[1].as_str())
+            || !zpk_schema::manifest::package_id(&args[2])
+        {
+            return fail("Usage: zpk desktop enable|disable ID");
+        }
+        let mut m = target()?;
+        for message in m.reconcile()? {
+            eprintln!("{message}");
+        }
+        m.desktop_enabled(&args[2], args[1] == "enable")?;
+        println!(
+            "{}",
+            serde_json::json!({"id":args[2],"desktop_enabled":args[1]=="enable"})
+        );
         return Ok(());
     }
     let verb = args.remove(0);
@@ -126,14 +155,7 @@ fn execute() -> Result<()> {
     {
         return fail("unsupported manager command");
     }
-    if unsafe { libc::geteuid() } != 0
-        || !Path::new("/etc/alpine-release").is_file()
-        || !Path::new("/etc/zionos-release").is_file()
-        || !Path::new("/sbin/openrc-run").is_file()
-    {
-        return fail("manager administration is only supported by root on the target Alpine/ZionOS system; never deploy packages on the Windows/WSL developer host");
-    }
-    let mut m = Manager::open(Path::new("/"), Environment::Persistent, Alpine)?;
+    let mut m = target()?;
     // A requested repair plan never triggers filesystem/service reconciliation.
     if !repair {
         for message in m.reconcile()? {

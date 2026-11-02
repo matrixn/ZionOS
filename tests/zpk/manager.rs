@@ -354,6 +354,29 @@ fn desktop_selection_static_ui_and_shared_backend_are_recorded_without_fake_daem
         manager.install(&p, false, &policy, &NoFaults).unwrap();
         let record = manager.info(&m.package.id).unwrap();
         assert_eq!(record.current().parsed().unwrap().desktop.len(), 2);
+        let public = r.path().join("run/zionos/desktop/registry.json");
+        assert_eq!(
+            zpk_schema::desktop::Registry::parse(&fs::read(&public).unwrap())
+                .unwrap()
+                .apps
+                .len(),
+            2
+        );
+        manager.desktop_enabled(&m.package.id, false).unwrap();
+        assert!(
+            zpk_schema::desktop::Registry::parse(&fs::read(&public).unwrap())
+                .unwrap()
+                .apps
+                .is_empty()
+        );
+        manager.desktop_enabled(&m.package.id, true).unwrap();
+        assert_eq!(
+            zpk_schema::desktop::Registry::parse(&fs::read(&public).unwrap())
+                .unwrap()
+                .apps
+                .len(),
+            2
+        );
         let expected = match case {
             "single" => Some("hello"),
             "multiple" => Some("status"),
@@ -378,7 +401,85 @@ fn desktop_selection_static_ui_and_shared_backend_are_recorded_without_fake_daem
             );
             assert_eq!(record.service_state, "not-required");
         }
+        manager.uninstall(&m.package.id, &NoFaults).unwrap();
+        assert!(
+            zpk_schema::desktop::Registry::parse(&fs::read(&public).unwrap())
+                .unwrap()
+                .apps
+                .is_empty()
+        );
     }
+}
+#[test]
+fn desktop_projection_is_unavailable_during_interruption_and_rebuilt_after_reconciliation() {
+    struct Interrupted;
+    impl Faults for Interrupted {
+        fn checkpoint(&self, p: &str) -> Result<()> {
+            if p == "activating" {
+                Err("simulated interruption before activation".into())
+            } else {
+                Ok(())
+            }
+        }
+    }
+    let r = root();
+    let mut manager = open(r.path());
+    let mut manifest = Manifest::parse(include_str!("fixtures/valid/multi-desktop.toml")).unwrap();
+    let mut policy = review();
+    policy.approved_permissions = vec![Permission::DesktopUi];
+    policy.start = false;
+    let first = package(r.path(), &manifest);
+    manager.install(&first, false, &policy, &NoFaults).unwrap();
+    assert!(zpk_manager::desktop::clean(&manager.root));
+    manifest.package.version = "1.1.0".parse().unwrap();
+    manifest.compatibility.upgrades_from = ">=1.0.0, <2.0.0".parse().unwrap();
+    let second = package(r.path(), &manifest);
+    assert!(manager
+        .install(&second, true, &policy, &Interrupted)
+        .is_err());
+    assert!(!zpk_manager::desktop::clean(&manager.root));
+    drop(manager);
+    let mut manager = open(r.path());
+    manager.reconcile().unwrap();
+    assert!(zpk_manager::desktop::clean(&manager.root));
+    assert_eq!(manager.info(&manifest.package.id).unwrap().active, "1.0.0");
+}
+#[test]
+fn non_desktop_transactions_do_not_revoke_unchanged_application_views() {
+    struct Interrupted;
+    impl Faults for Interrupted {
+        fn checkpoint(&self, p: &str) -> Result<()> {
+            if p == "prepared" {
+                Err("interrupted non-UI transaction".into())
+            } else {
+                Ok(())
+            }
+        }
+    }
+    let r = root();
+    let mut manager = open(r.path());
+    let m = Manifest::parse(include_str!("fixtures/valid/multi-desktop.toml")).unwrap();
+    let mut policy = review();
+    policy.approved_permissions = vec![Permission::DesktopUi];
+    policy.start = false;
+    manager
+        .install(&package(r.path(), &m), false, &policy, &NoFaults)
+        .unwrap();
+    let before = fs::read(r.path().join("run/zionos/desktop/ready")).unwrap();
+    assert!(manager
+        .install(
+            &package(r.path(), &manifest("1.0.0")),
+            false,
+            &review(),
+            &Interrupted
+        )
+        .is_err());
+    assert!(zpk_manager::desktop::clean(&manager.root));
+    manager.reconcile().unwrap();
+    assert_eq!(
+        fs::read(r.path().join("run/zionos/desktop/ready")).unwrap(),
+        before
+    );
 }
 #[test]
 fn malformed_archive_cpu_hash_and_path_fail_before_activation() {

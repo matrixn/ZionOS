@@ -60,6 +60,9 @@ class OverlaySafety(unittest.TestCase):
             stage.mkdir()
             for name in ("zion-core", "index.html", "app.js", "zion-core.initd"):
                 (stage / name).write_text("fixture\n")
+            (stage / "apps").mkdir()
+            for name in ("registry.js", "bridge.js"):
+                (stage / "apps" / name).write_text("fixture\n")
             # The production builder mounts this repository at /workspace.
             # Relocate that single literal for an unprivileged local fixture.
             script = (ROOT / "platform/alpine/genapkovl-zionos.sh").read_text()
@@ -92,7 +95,7 @@ class OverlaySafety(unittest.TestCase):
                              "etc/runlevels/sysinit/devfs",
                              "etc/runlevels/shutdown/killprocs"):
                     self.assertTrue(archive.getmember(name).issym(), name)
-                for name in ("opt/zionos/web/index.html", "opt/zionos/web/app.js"):
+                for name in ("opt/zionos/web/index.html", "opt/zionos/web/app.js", "opt/zionos/web/apps/registry.js", "opt/zionos/web/apps/bridge.js"):
                     self.assertGreater(archive.getmember(name).size, 0)
             (stage / "app.js").write_text("")
             rejected = subprocess.run(

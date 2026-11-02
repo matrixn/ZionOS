@@ -1,6 +1,6 @@
 'use strict';
 /* ZionOS Shell Genesis 0.6. No external assets, runtime dependencies or privileged APIs. */
-const APPS = [
+const BUILTIN_APPS = [
   { id: 'overview', title: 'System Overview', short: 'Overview', icon: 'grid', tile: 'tile-activity', subtitle: 'Hardware & performance', dock: true },
   { id: 'files', title: 'File Station', short: 'Files', icon: 'folder', tile: 'tile-files', subtitle: 'File explorer · preview', dock: true },
   { id: 'storage', title: 'Storage Manager', short: 'Storage', icon: 'hard-drive', tile: 'tile-storage', subtitle: 'Devices & volumes', dock: true },
@@ -11,8 +11,17 @@ const APPS = [
 ];
 const byId = (id) => document.getElementById(id);
 const icon = (name, size = '') => `<svg class="svg ${size}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
-const appById = (id) => APPS.find((app) => app.id === id);
+const appRegistry = new ZionDesktopRegistry.Registry(BUILTIN_APPS);
+const allApps = () => appRegistry.all();
+const appById = (id) => appRegistry.get(id);
 const windows = new Map();
+let appBridge;
+let appsLoading = false;
+let appsValidUntil = 0;
+let instanceSequence = 0;
+let dockSignature = '';
+const pinnedApps = new Set(BUILTIN_APPS.filter(a => a.dock).map(a => a.id));
+try { const saved=JSON.parse(localStorage.getItem('zionos.desktop.pins.v1')||'null'); if(Array.isArray(saved)&&saved.length<=128&&saved.every(id=>typeof id==='string'&&id.length<=400)){pinnedApps.clear();saved.forEach(id=>pinnedApps.add(id));} } catch { /* optional browser-local dock preferences */ }
 const cpuHistory = [];
 let zIndex = 20;
 let currentMetrics = null;
@@ -59,6 +68,7 @@ function applyPrefs() {
     el.classList.toggle('selected', el.dataset.motionChoice === prefs.motion);
     el.setAttribute('aria-pressed', String(el.dataset.motionChoice === prefs.motion));
   });
+  appBridge?.broadcastTheme({mode:prefs.theme,accent:prefs.accent,motion:prefs.motion});
 }
 function savePrefs() {
   try { localStorage.setItem(prefsKey, JSON.stringify(prefs)); } catch { /* optional */ }
@@ -73,27 +83,42 @@ function toast(message) {
 }
 function renderAppButtons() {
   const icons = byId('desktop-icons');
-  const dock = byId('dock');
   const launcher = byId('launcher-grid');
   icons.replaceChildren();
-  dock.replaceChildren();
   launcher.replaceChildren();
-  for (const app of APPS) {
+  for (const app of allApps()) {
     const launch = document.createElement('button');
     launch.className = 'launcher-app';
     launch.type = 'button';
     launch.dataset.open = app.id;
-    launch.innerHTML = `<span class="icon-tile ${app.tile}">${icon(app.icon)}</span><span>${app.short}</span>`;
+    const tile=document.createElement('span');tile.className=`icon-tile ${app.tile}`;tile.append(appIcon(app));
+    const label=document.createElement('span');label.textContent=app.short;launch.append(tile,label);
+    launch.title=`${app.title} · ${(app.categories||[]).join(', ')}`;
     launcher.appendChild(launch);
     if (['overview', 'storage', 'files', 'network'].includes(app.id)) {
       const shortcut = document.createElement('button');
       shortcut.className = 'desktop-icon';
       shortcut.dataset.open = app.id;
       shortcut.title = `Deschide ${app.title}`;
-      shortcut.innerHTML = `<span class="icon-tile ${app.tile}">${icon(app.icon)}</span><span>${app.short}</span>`;
+      const tile=document.createElement('span');tile.className=`icon-tile ${app.tile}`;tile.append(appIcon(app));
+      const label=document.createElement('span');label.textContent=app.short;shortcut.append(tile,label);
       icons.appendChild(shortcut);
     }
   }
+  renderDock(true);
+  filterLauncher(byId('launcher-input').value);
+}
+function appIcon(app,size='') {
+  if(app.native){const img=document.createElement('img');img.src=app.iconURL;img.alt='';img.className=`app-icon ${size}`;img.draggable=false;return img;}
+  const span=document.createElement('span');span.className='builtin-app-icon';span.innerHTML=icon(app.icon,size);return span;
+}
+function instances(id){return [...windows.values()].filter(win=>win.dataset.app===id).sort((a,b)=>(+b.style.zIndex)-(+a.style.zIndex));}
+function renderDock(force=false) {
+  const apps=allApps().filter(a=>pinnedApps.has(a.id)||instances(a.id).length);
+  const signature=apps.map(a=>`${a.id}:${a.revision||''}`).join('|');
+  if(!force&&signature===dockSignature)return;dockSignature=signature;
+  const focused=document.activeElement?.dataset?.dock;
+  const dock=byId('dock');dock.replaceChildren();
   const start = document.createElement('button');
   start.type = 'button'; start.className = 'dock-button launcher'; start.id = 'dock-launcher';
   start.title = 'Aplicații'; start.setAttribute('aria-label', 'Aplicații');
@@ -102,22 +127,26 @@ function renderAppButtons() {
   dock.appendChild(start);
   const sep = document.createElement('span'); sep.className = 'dock-separator'; sep.setAttribute('aria-hidden', 'true');
   dock.appendChild(sep);
-  for (const app of APPS.filter((a) => a.dock)) {
+  for (const app of apps) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'dock-button'; button.dataset.dock = app.id;
     button.setAttribute('aria-label', app.title); button.title = app.title;
-    button.innerHTML = `${icon(app.icon)}<span class="dock-label">${app.title}</span>`;
-    button.addEventListener('click', () => {
-      const win = windows.get(app.id);
-      if (win && !win.classList.contains('minimized') && win.classList.contains('focused')) minimizeWindow(app.id);
+    const label=document.createElement('span');label.className='dock-label';label.textContent=app.title;button.append(appIcon(app),label);
+    button.addEventListener('click', (event) => {
+      const win = instances(app.id)[0];
+      if(event.shiftKey&&app.native&&app.multipleInstances){openApp(app.id,{newInstance:true});return;}
+      if (win && !win.classList.contains('minimized') && win.classList.contains('focused')) minimizeWindow(win.dataset.instance);
+      else if(win){focusWindow(win);win.focus({preventScroll:true});}
       else openApp(app.id);
     });
     dock.appendChild(button);
+    if(focused===app.id)button.focus({preventScroll:true});
   }
 }
 function updateDock() {
+  renderDock();
   document.querySelectorAll('[data-dock]').forEach((button) => {
-    const win = windows.get(button.dataset.dock);
+    const win = instances(button.dataset.dock).find(w=>!w.classList.contains('minimized'));
     button.classList.toggle('active', Boolean(win && !win.classList.contains('minimized')));
     button.setAttribute('aria-pressed', String(Boolean(win && !win.classList.contains('minimized'))));
   });
@@ -139,85 +168,158 @@ function filterLauncher(query) {
   const q = query.trim().toLocaleLowerCase('ro');
   document.querySelectorAll('.launcher-app').forEach((el) => {
     const app = appById(el.dataset.open);
-    el.hidden = !(app && `${app.title} ${app.short} ${app.subtitle}`.toLocaleLowerCase('ro').includes(q));
+    el.hidden = !(app && `${app.title} ${app.short} ${app.subtitle} ${app.packageId||''} ${(app.categories||[]).join(' ')}`.toLocaleLowerCase('ro').includes(q));
     el.style.display = el.hidden ? 'none' : '';
   });
 }
 function focusWindow(el) {
   windows.forEach((win) => win.classList.remove('focused'));
   el.classList.remove('minimized');
+  el.setAttribute('aria-hidden','false');
   el.classList.add('focused');
   el.style.zIndex = String(++zIndex);
   updateDock();
 }
-function createWindow(app) {
+function createWindow(app,key=app.id) {
   const win = document.createElement('section');
-  win.className = 'os-window'; win.dataset.app = app.id;
+  win.className = `os-window${app.native?' zpk-window':''}`; win.dataset.app = app.id;win.dataset.instance=key;
   win.setAttribute('role', 'dialog'); win.setAttribute('aria-label', app.title);
   win.tabIndex = -1;
   const offset = windows.size * 28;
   win.style.left = `${Math.max(130, Math.round((innerWidth - 820) / 2)) + offset}px`;
   win.style.top = `${Math.max(86, Math.round((innerHeight - 650) / 2)) + offset}px`;
-  win.innerHTML = `<div class="window-header"><span style="color:var(--accent)">${icon(app.icon, 'small')}</span><span class="window-title">${app.title}</span><span class="window-subtitle">${app.subtitle}</span><div class="window-controls"><button class="win-control" data-window-action="min" title="Minimizează" aria-label="Minimizează">${icon('minus','tiny')}</button><button class="win-control" data-window-action="max" title="Maximizează" aria-label="Maximizează">${icon('max','tiny')}</button><button class="win-control close" data-window-action="close" title="Închide" aria-label="Închide">${icon('close','tiny')}</button></div></div><div class="window-body"></div>`;
-  const template = byId(`tpl-${app.id}`);
-  win.querySelector('.window-body').appendChild(template.content.cloneNode(true));
+  win.innerHTML = `<div class="window-header"><span class="window-app-icon" style="color:var(--accent)"></span><span class="window-title"></span><span class="window-subtitle"></span><div class="window-controls"><button class="win-control" data-window-action="pin" title="Fixează în dock" aria-label="Fixează în dock">${icon('pin','tiny')}</button><button class="win-control" data-window-action="min" title="Minimizează" aria-label="Minimizează">${icon('minus','tiny')}</button><button class="win-control" data-window-action="max" title="Maximizează" aria-label="Maximizează">${icon('max','tiny')}</button><button class="win-control close" data-window-action="close" title="Închide" aria-label="Închide">${icon('close','tiny')}</button></div></div><div class="window-body"></div>`;
+  win.querySelector('.window-app-icon').append(appIcon(app,'small'));
+  win.querySelector('.window-title').textContent=app.title;win.querySelector('.window-subtitle').textContent=app.subtitle;
+  const pin=win.querySelector('[data-window-action="pin"]');pin.setAttribute('aria-pressed',String(pinnedApps.has(app.id)));
+  pin.title=pinnedApps.has(app.id)?'Scoate din dock':'Fixează în dock';pin.setAttribute('aria-label',pin.title);
+  if(app.native&&!app.window.resizable)win.querySelector('[data-window-action="max"]').disabled=true;
+  if(app.native){
+    const frame=document.createElement('iframe');frame.title=app.title;frame.dataset.zpkFrame=app.id;
+    frame.setAttribute('sandbox','allow-scripts');frame.setAttribute('credentialless','');frame.referrerPolicy='no-referrer';
+    frame.setAttribute('allow',"camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen 'none'");
+    appBridge.attach(frame,app,key);frame.src=app.entryURL;win.querySelector('.window-body').append(frame);
+    frame.addEventListener('focus',()=>focusWindow(win));
+    if(app.multipleInstances){const button=document.createElement('button');button.type='button';button.className='win-control';button.textContent='+';button.title='Fereastră nouă';button.setAttribute('aria-label','Fereastră nouă');button.addEventListener('click',()=>openApp(app.id,{newInstance:true}));win.querySelector('.window-controls').prepend(button);}
+  }else{const template = byId(`tpl-${app.id}`);win.querySelector('.window-body').appendChild(template.content.cloneNode(true));}
   win.addEventListener('pointerdown', () => focusWindow(win));
   win.querySelectorAll('[data-window-action]').forEach((button) => button.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (button.dataset.windowAction === 'close') closeWindow(app.id);
-    if (button.dataset.windowAction === 'min') minimizeWindow(app.id);
-    if (button.dataset.windowAction === 'max') maximizeWindow(app.id);
+    if (button.dataset.windowAction === 'close') closeWindow(key);
+    if (button.dataset.windowAction === 'min') minimizeWindow(key);
+    if (button.dataset.windowAction === 'max') maximizeWindow(key);
+    if (button.dataset.windowAction === 'pin') togglePin(app.id);
   }));
   const header = win.querySelector('.window-header');
+  header.tabIndex=0;header.setAttribute('aria-label',`Mută fereastra ${app.title}; folosește săgețile`);
+  header.addEventListener('keydown',event=>{if(event.target!==header||!event.key.startsWith('Arrow')||win.classList.contains('maximized')||innerWidth<700)return;event.preventDefault();const step=event.shiftKey?40:10;moveWindow(win,win.offsetLeft+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0),win.offsetTop+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0));});
   header.addEventListener('dblclick', (e) => {
-    if (!e.target.closest('button')) maximizeWindow(app.id);
+    if (!e.target.closest('button')) maximizeWindow(key);
   });
   header.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || e.target.closest('button') || win.classList.contains('maximized') || innerWidth < 700) return;
     const startX = e.clientX; const startY = e.clientY;
     const startLeft = win.offsetLeft; const startTop = win.offsetTop;
+    document.documentElement.classList.add('window-moving');header.setPointerCapture?.(e.pointerId);
     function move(event) {
-      const left = Math.max(0, Math.min(innerWidth - 85, startLeft + event.clientX - startX));
-      const top = Math.max(54, Math.min(innerHeight - 100, startTop + event.clientY - startY));
-      win.style.left = `${left}px`; win.style.top = `${top}px`;
+      moveWindow(win,startLeft+event.clientX-startX,startTop+event.clientY-startY);
     }
-    function done() { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', done); window.removeEventListener('pointercancel', done); }
+    function done() { document.documentElement.classList.remove('window-moving');window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', done); window.removeEventListener('pointercancel', done); }
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', done);
     window.addEventListener('pointercancel', done);
   });
-  windows.set(app.id, win);
+  if(!app.native||app.window.resizable){
+    const handle=document.createElement('button');handle.type='button';handle.className='window-resize';handle.textContent='↘';handle.title='Redimensionează; folosește săgețile';handle.setAttribute('aria-label','Redimensionează fereastra');win.append(handle);
+    handle.addEventListener('keydown',event=>{if(!event.key.startsWith('Arrow'))return;event.preventDefault();const step=event.shiftKey?40:10;sizeWindow(key,{width:win.offsetWidth+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0),height:win.offsetHeight+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0)});});
+    handle.addEventListener('pointerdown',event=>{
+      if(event.button!==0||win.classList.contains('maximized')||innerWidth<700)return;event.preventDefault();
+      const x=event.clientX,y=event.clientY,w=win.offsetWidth,h=win.offsetHeight;document.documentElement.classList.add('window-moving');handle.setPointerCapture?.(event.pointerId);
+      const move=e=>sizeWindow(key,{width:w+e.clientX-x,height:h+e.clientY-y});
+      const done=()=>{document.documentElement.classList.remove('window-moving');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',done);window.removeEventListener('pointercancel',done);};
+      window.addEventListener('pointermove',move);window.addEventListener('pointerup',done);window.addEventListener('pointercancel',done);
+    });
+  }
+  windows.set(key, win);
   byId('window-layer').appendChild(win);
+  if(app.native)sizeWindow(key,{width:app.window.width,height:app.window.height});
   focusWindow(win);
   return win;
 }
-function openApp(id) {
+function openApp(id,{newInstance=false}={}) {
   const app = appById(id);
   if (!app) return;
   toggleLauncher(false);
-  const win = windows.get(id) || createWindow(app);
+  let win=instances(id)[0];
+  if(!win||(newInstance&&app.native&&app.multipleInstances)){
+    if(windows.size>=32){toast('Închide o fereastră înainte de a deschide alta.');return;}
+    const key=app.native&&app.multipleInstances?`${id}::${++instanceSequence}`:id;
+    win=createWindow(app,key);
+  }
   focusWindow(win);
+  win.focus({preventScroll:true});
   hydrateWindow(win);
   if (id === 'storage') { renderStorageWindow(win); renderPoolWindow(win); pollStorage(); pollPools(); pollLab(); }
 }
 function closeWindow(id) {
   const win = windows.get(id);
   if (!win) return;
+  const hadFocus=win.classList.contains('focused')||win.contains(document.activeElement);
+  const frame=win.querySelector('iframe');if(frame)appBridge.detach(frame);
   win.remove(); windows.delete(id);
   const top = Array.from(windows.values()).filter((w) => !w.classList.contains('minimized')).sort((a,b) => (+b.style.zIndex)-(+a.style.zIndex))[0];
-  if (top) focusWindow(top);
+  if (hadFocus&&top) {focusWindow(top);top.focus({preventScroll:true});}
+  else if(hadFocus) byId('brand-launcher').focus();
   updateDock();
 }
 function minimizeWindow(id) {
   const win = windows.get(id);
   if (!win) return;
   win.classList.add('minimized'); win.classList.remove('focused');
+  win.setAttribute('aria-hidden','true');
+  const top=[...windows.values()].filter(w=>!w.classList.contains('minimized')).sort((a,b)=>(+b.style.zIndex)-(+a.style.zIndex))[0];if(top)focusWindow(top);
   updateDock();
+  const restore=[...document.querySelectorAll('[data-dock]')].find(b=>b.dataset.dock===win.dataset.app);restore?.focus();
 }
 function maximizeWindow(id) {
   const win = windows.get(id);
   if (!win) return;
-  win.classList.toggle('maximized'); focusWindow(win);
+  if(win.classList.contains('maximized')){win.classList.remove('maximized');win.style.cssText=win.restoreStyle||'';}
+  else{win.restoreStyle=win.style.cssText;for(const prop of ['width','height','top','left'])win.style.removeProperty(prop);win.classList.add('maximized');}
+  win.querySelector('[data-window-action="max"]').setAttribute('aria-pressed',String(win.classList.contains('maximized')));focusWindow(win);
+}
+function moveWindow(win,left,top){win.style.setProperty('left',`${Math.max(0,Math.min(innerWidth-85,left))}px`,'important');win.style.setProperty('top',`${Math.max(54,Math.min(innerHeight-100,top))}px`,'important');}
+function sizeWindow(key,size){
+  const win=windows.get(key);if(!win)throw new Error('Window closed');
+  if(!win.classList.contains('maximized')&&innerWidth>=700){
+    const app=appById(win.dataset.app);const maxWidth=Math.max(160,innerWidth-24),maxHeight=Math.max(120,innerHeight-130);
+    const minWidth=Math.min(app?.window?.min_width||320,maxWidth),minHeight=Math.min(app?.window?.min_height||360,maxHeight);
+    win.style.minWidth=`${minWidth}px`;win.style.minHeight=`${minHeight}px`;
+    win.style.setProperty('width',`${Math.max(minWidth,Math.min(maxWidth,size.width))}px`,'important');win.style.setProperty('height',`${Math.max(minHeight,Math.min(maxHeight,size.height))}px`,'important');
+  }
+  return {width:Math.round(win.getBoundingClientRect().width),height:Math.round(win.getBoundingClientRect().height)};
+}
+function togglePin(id){if(pinnedApps.has(id))pinnedApps.delete(id);else if(pinnedApps.size<128)pinnedApps.add(id);else{toast('Limita de aplicații fixate a fost atinsă.');return;}try{localStorage.setItem('zionos.desktop.pins.v1',JSON.stringify([...pinnedApps]));}catch{/* session-only when browser persistence is unavailable */}for(const win of windows.values())if(win.dataset.app===id){const button=win.querySelector('[data-window-action="pin"]');button.setAttribute('aria-pressed',String(pinnedApps.has(id)));button.title=pinnedApps.has(id)?'Scoate din dock':'Fixează în dock';button.setAttribute('aria-label',button.title);}renderDock(true);updateDock();}
+async function pollApps(){
+  if(appsLoading)return;appsLoading=true;let changes;
+  try{const r=await fetch('/api/apps',{cache:'no-store',signal:AbortSignal.timeout(4500)});if(!r.ok)throw new Error('Registry unavailable');changes=appRegistry.replace(await r.json());appsValidUntil=Date.now()+7000;}
+  catch{appsValidUntil=0;changes=appRegistry.clear();}
+  finally{appsLoading=false;}
+  if(!changes.removed.length&&!changes.changed.length&&!changes.added.length)return;
+  for(const id of [...changes.removed,...changes.changed])for(const win of instances(id))closeWindow(win.dataset.instance);
+  renderAppButtons();updateDock();
+}
+function appConfirm(app,options,signal){
+  if(document.querySelector('.app-confirm[open]'))return Promise.reject(new ZionAppBridge.Failure('BUSY','Another confirmation is open.'));
+  return new Promise(resolve=>{
+    const dialog=document.createElement('dialog');dialog.className='app-confirm';
+    const heading=document.createElement('h2');heading.textContent=options.title;const owner=document.createElement('p');owner.className='app-confirm-owner';owner.textContent=app.title;const message=document.createElement('p');message.textContent=options.message;
+    const actions=document.createElement('div');actions.className='app-confirm-actions';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Anulează';const accept=document.createElement('button');accept.type='button';accept.textContent='Confirmă';actions.append(cancel,accept);dialog.append(owner,heading,message,actions);document.body.append(dialog);
+    let settled=false;const timer=setTimeout(()=>done(false),30000);
+    function done(value){if(settled)return;settled=true;clearTimeout(timer);signal.removeEventListener('abort',abort);dialog.close();dialog.remove();resolve(value);}
+    const abort=()=>done(false);signal.addEventListener('abort',abort,{once:true});cancel.onclick=()=>done(false);accept.onclick=()=>done(true);dialog.addEventListener('cancel',e=>{e.preventDefault();done(false);});
+    dialog.showModal();cancel.focus();if(signal.aborted)done(false);
+  });
 }
 function setText(win, key, value) {
   win.querySelectorAll(`[data-bind="${key}"]`).forEach((node) => { node.textContent = String(value); });
@@ -351,7 +453,7 @@ function wireEvents() {
   });
   document.addEventListener('click', (event) => {
     const open = event.target.closest('[data-open]');
-    if (open) { openApp(open.dataset.open); return; }
+    if (open) { openApp(open.dataset.open,{newInstance:event.shiftKey}); return; }
     const refresh = event.target.closest('[data-refresh]');
     if (refresh) { pollMetrics(); toast('Se actualizează informațiile despre sistem.'); return; }
     const storageRefresh = event.target.closest('[data-storage-refresh]');
@@ -379,17 +481,27 @@ function wireEvents() {
     renderPoolWindow(windows.get('storage'));
   });
   document.addEventListener('keydown', (event) => {
+    if(event.key==='Tab'&&launcherOpen){const nodes=[byId('launcher-input'),...[...byId('launcher-grid').querySelectorAll('button')].filter(b=>!b.hidden)];const current=nodes.indexOf(document.activeElement);if(event.shiftKey&&current<=0){event.preventDefault();nodes[nodes.length-1].focus();}else if(!event.shiftKey&&current===nodes.length-1){event.preventDefault();nodes[0].focus();}}
     if (event.key === 'Escape' && launcherOpen) { event.preventDefault(); toggleLauncher(false); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); toggleLauncher(true); }
     if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'o') { event.preventDefault(); openApp('overview'); }
   });
+  window.addEventListener('blur',()=>setTimeout(()=>{const frame=document.activeElement;if(frame?.tagName==='IFRAME'){const win=frame.closest('.os-window');if(win)focusWindow(win);}},0));
+  window.addEventListener('resize',()=>{for(const win of windows.values()){if(innerWidth<700){win.style.removeProperty('width');win.style.removeProperty('height');win.style.minWidth='0';win.style.minHeight='0';}else if(!win.classList.contains('maximized')){sizeWindow(win.dataset.instance,{width:win.offsetWidth,height:win.offsetHeight});moveWindow(win,win.offsetLeft,win.offsetTop);}}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='hidden')pollApps();});
 }
+appBridge=new ZionAppBridge.Bridge({window,crypto,isCurrent:app=>Date.now()<=appsValidUntil&&appById(app.id)?.revision===app.revision,getTheme:()=>({mode:prefs.theme,accent:prefs.accent,motion:prefs.motion}),
+  setTitle:(key,title)=>{const win=windows.get(key);if(!win)throw new Error('Window closed');win.querySelector('.window-title').textContent=title;win.setAttribute('aria-label',title);},
+  setSize:sizeWindow,notify:(app,notice)=>toast(`${app.title} · ${notice.title}: ${notice.message}`),confirm:appConfirm,
+  navigationBlocked:key=>{closeWindow(key);toast('Pagina aplicației s-a schimbat. Redeschide aplicația din launcher.');}});
 loadPrefs();
 renderAppButtons();
 wireEvents();
 updateClock();
 setInterval(updateClock, 30_000);
 openApp('overview');
+pollApps();
+setInterval(()=>{if(document.visibilityState!=='hidden')pollApps();},5000);
 pollMetrics();
 setInterval(() => { if (document.visibilityState !== 'hidden') pollMetrics(); }, 5000);
 setInterval(() => {

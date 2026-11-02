@@ -94,7 +94,7 @@ Service and single/multiple desktop examples are in
 | `files.permissions` | Defaults empty, must be unique subset of package permissions |
 | `service` | Optional one `{executable, arguments, run_as, autostart, permissions}`; executable references declared native executable; `run_as="package"` only. At most 64 literal nonempty arguments, each max 1024 bytes, no controls. Requires global background-service permission |
 | `desktop` | Optional array, zero to 32 entries with unique local IDs; examples cover zero, one and multiple entries |
-| `desktop` entry | `{id, name, entry, icon, executable?, categories, permissions, window}`. Entry references declared ui .html; icon references declared icon .png; optional executable references a declared executable |
+| `desktop` entry | `{id, name, entry, icon, executable?, categories, permissions, window, multiple_instances?}`. Entry references declared ui .html; icon references declared icon .png; optional executable references a declared executable. `multiple_instances` defaults to false |
 | `window` | Required width/height/min_width/min_height/resizable. Minimum width 160..7680, minimum height 120..4320; initial dimensions at least minima, at most 7680×4320 |
 | `storage` | Optional up to 32 `{name, kind, schema, max_bytes, preserve_on_upgrade}`. Unique local name, kind `data`/`config`, positive schema/quota, required preservation declaration. No absolute host paths or actual directory allocation |
 
@@ -104,7 +104,7 @@ letters/digits/hyphens, and are at most 64 bytes. Categories (1..16 unique) are:
 `system`. Desktop names are nonempty bounded text (128 bytes).
 
 Permissions: `desktop-ui`, `background-service`, `persistent-data`,
-`configuration-write`, `network-client`, `network-listen`. Declared file/service/UI
+`configuration-write`, `network-client`, `network-listen`, `notifications`. Declared file/service/UI
 permissions must be subsets of global permissions. Desktop entries require desktop-ui;
 service requires background-service; storage data/config require persistent-data /
 configuration-write. Unknown or undeclared permissions fail validation. Unused

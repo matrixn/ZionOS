@@ -1,5 +1,6 @@
 //! Local native package transactions. No HTTP, catalog, builder or package hooks.
 pub mod database;
+pub mod desktop;
 pub mod filesystem;
 pub mod host;
 pub mod manager;

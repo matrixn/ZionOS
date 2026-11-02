@@ -1,4 +1,5 @@
 mod access;
+mod apps;
 mod cache;
 mod lab;
 mod pools;
@@ -234,21 +235,36 @@ async fn index() -> Response {
 async fn app_js() -> Response {
     serve_asset("app.js", "application/javascript; charset=utf-8")
 }
+async fn app_bridge_js() -> Response {
+    serve_asset("apps/bridge.js", "application/javascript; charset=utf-8")
+}
+async fn app_registry_js() -> Response {
+    serve_asset("apps/registry.js", "application/javascript; charset=utf-8")
+}
 
+#[cfg(test)]
 fn router(policy: access::Policy) -> Router {
+    router_with_apps(policy, apps::Store::system())
+}
+fn router_with_apps(policy: access::Policy, store: apps::Store) -> Router {
     Router::new()
         .route("/", get(index))
         .route("/app.js", get(app_js))
+        .route("/desktop-app-registry.js", get(app_registry_js))
+        .route("/desktop-app-bridge.js", get(app_bridge_js))
+        .route("/api/apps", get(apps::list))
+        .route("/app-assets/{id}/{version}/{*path}", get(apps::asset))
         .route("/api/health", get(health))
         .route("/api/metrics", get(metrics))
         .route("/api/storage", get(storage_info))
         .route("/api/pools", get(pools_info))
         .route("/api/provisioning", get(provisioning_info))
+        .layer(axum::Extension(std::sync::Arc::new(store)))
         .layer(axum::middleware::from_fn_with_state(policy, access::gate))
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if let Some(mode) = std::env::args().nth(1) {
         if ["--lab-plan", "--lab-check"].contains(&mode.as_str()) {
             std::process::exit(lab::console(&mode).await);
@@ -263,7 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let policy = access::Policy::runtime(port);
     let address = SocketAddr::from((policy.bind_ip(), port));
 
-    let router = router(policy);
+    let router = router_with_apps(policy, apps::Store::configured()?);
 
     let listener = TcpListener::bind(address).await?;
     println!("ZionOS Core {VERSION} listening on http://{address} (read-only, NO authentication)");
@@ -319,7 +335,14 @@ mod tests {
         let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(value["version"], VERSION);
         assert_eq!(value["readonly"], true);
-        for route in ["health", "metrics", "storage", "pools", "provisioning"] {
+        for route in [
+            "health",
+            "metrics",
+            "storage",
+            "pools",
+            "provisioning",
+            "apps",
+        ] {
             let response = local
                 .clone()
                 .oneshot(request(

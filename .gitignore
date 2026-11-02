@@ -11,6 +11,11 @@
 # Node/Vite generated files and dependency caches.
 **/node_modules/
 **/dist/
+!/web/zion-app-sdk/dist/
+!/web/zion-app-sdk/dist/zion-app-sdk.js
+!/web/zion-app-sdk/dist/zion-app-sdk.d.ts
+!/web/zion-app-sdk/dist/zion-app-sdk.mjs
+!/web/zion-app-sdk/dist/index.d.ts
 **/.vite/
 **/.nuxt/
 **/.cache/

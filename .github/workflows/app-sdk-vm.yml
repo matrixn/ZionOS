@@ -1,0 +1,31 @@
+name: Zion App SDK native desktop VM integration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and VM tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools qemu-system-x86 qemu-utils xorriso e2fsprogs
+          npm --prefix web/zion-app-sdk ci --ignore-scripts --no-audit --no-fund
+          cd web/zion-app-sdk
+          npx playwright install --with-deps chromium
+      - name: Trusted build environments and final Genesis ISO
+        run: |
+          cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello --prepare-builder
+          bash scripts/build-iso.sh
+      - name: Native non-root backend, real browser SDK, read-only Core and uninstall revocation
+        run: bash tests/apps/check.sh --vm

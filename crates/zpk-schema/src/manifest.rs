@@ -10,6 +10,7 @@ pub const MANIFEST_LIMIT: usize = 64 * 1024;
 #[serde(rename_all = "kebab-case")]
 pub enum Permission {
     DesktopUi,
+    Notifications,
     BackgroundService,
     PersistentData,
     ConfigurationWrite,
@@ -127,6 +128,8 @@ pub struct Service {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DesktopApp {
+    #[serde(default)]
+    pub multiple_instances: bool,
     pub id: String,
     pub name: String,
     pub entry: String,

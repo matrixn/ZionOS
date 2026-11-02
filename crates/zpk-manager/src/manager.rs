@@ -41,6 +41,7 @@ pub struct Manager<H: Host> {
 }
 #[derive(Debug, serde::Serialize)]
 pub struct Report {
+    pub desktop_registry: String,
     pub operation: i64,
     pub state: String,
     pub package_id: String,
@@ -396,6 +397,7 @@ impl<H: Host> Manager<H> {
             f.sync_all()?;
         }
         sync_tree(&stage)?;
+        crate::desktop::entries(&p.manifest, &stage, &record.current().manifest_sha256)?;
         fault.checkpoint("stage-written")?;
         self.database.phase(n, "STAGED")?;
         fault.checkpoint("staged")?;
@@ -514,6 +516,7 @@ impl<H: Host> Manager<H> {
             inventory_sha256: digest(&meta["checksums.json"]),
         };
         let mut new = old.clone().unwrap_or_else(|| Record {
+            desktop_enabled: true,
             id: id.clone(),
             active: version.clone(),
             previous: None,
@@ -550,6 +553,7 @@ impl<H: Host> Manager<H> {
             start: review.start || was_running,
         };
         op.validate(&self.root.path)?;
+        crate::desktop::invalidate_for(&self.root, &op)?;
         let n = self.database.prepare(&op)?;
         fault.checkpoint("prepared")?;
         if let Err(e) = self.stage_archive(&op, n, &bytes, fault) {
@@ -561,6 +565,7 @@ impl<H: Host> Manager<H> {
                     self.database.diagnostic(n, &cleanup.to_string())?;
                 }
             }
+            let _ = self.publish_desktop();
             return Err(e);
         }
         self.activate(op, n, fault)
@@ -633,6 +638,7 @@ impl<H: Host> Manager<H> {
                 ));
             }
             self.database.phase(n, "FAILED")?;
+            let _ = self.publish_desktop();
             return Err(e);
         }
         if let Some(new) = &mut op.new {
@@ -654,6 +660,10 @@ impl<H: Host> Manager<H> {
                 .diagnostic(n, &format!("committed; cleanup pending: {e}"))?,
         }
         Ok(Report {
+            desktop_registry: self
+                .publish_desktop()
+                .map(|_| "published".into())
+                .unwrap_or_else(|e| format!("pending: {e}")),
             operation: n,
             state: "COMMITTED".into(),
             package_id: op.package_id,
@@ -754,6 +764,12 @@ impl<H: Host> Manager<H> {
                 }
             }
         }
+        if self.database.pending(&self.root.path)?.is_empty() && !crate::desktop::clean(&self.root)
+        {
+            if let Err(e) = self.publish_desktop() {
+                reports.push(format!("desktop projection unavailable: {e}"));
+            }
+        }
         Ok(reports)
     }
     fn dependents_stopped(&self, id: &str) -> Result<()> {
@@ -815,6 +831,7 @@ impl<H: Host> Manager<H> {
             was_running: running,
             start: running,
         };
+        crate::desktop::invalidate_for(&self.root, &op)?;
         let n = self.database.prepare(&op)?;
         fault.checkpoint("prepared")?;
         self.database.phase(n, "STAGED")?;
@@ -838,6 +855,7 @@ impl<H: Host> Manager<H> {
             was_running: running,
             start: false,
         };
+        crate::desktop::invalidate_for(&self.root, &op)?;
         let n = self.database.prepare(&op)?;
         fault.checkpoint("prepared")?;
         self.database.phase(n, "STAGED")?;
@@ -881,6 +899,21 @@ impl<H: Host> Manager<H> {
     pub fn logs(&self, id: &str, stderr: bool) -> Result<String> {
         self.ready()?;
         self.host.logs(&self.plan(&self.info(id)?)?, stderr)
+    }
+    pub fn publish_desktop(&self) -> Result<()> {
+        self.ready()?;
+        if crate::desktop::clean(&self.root) {
+            return Ok(());
+        }
+        crate::desktop::publish(&self.root, &self.list()?)
+    }
+    pub fn desktop_enabled(&self, id: &str, enabled: bool) -> Result<()> {
+        self.ready()?;
+        let mut r = self.info(id)?;
+        crate::desktop::invalidate(&self.root)?;
+        r.desktop_enabled = enabled;
+        self.database.service_state(&r)?;
+        self.publish_desktop()
     }
     pub fn repair_plan(&self, id: &str) -> Result<serde_json::Value> {
         if !zpk_schema::manifest::package_id(id) {

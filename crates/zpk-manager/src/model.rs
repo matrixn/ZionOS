@@ -35,11 +35,16 @@ impl Version {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Record {
+    #[serde(default = "enabled")]
+    pub desktop_enabled: bool,
     pub id: String,
     pub active: String,
     pub previous: Option<String>,
     pub versions: BTreeMap<String, Version>,
     pub service_state: String,
+}
+fn enabled() -> bool {
+    true
 }
 impl Record {
     pub fn validate(&self, root: &std::path::Path) -> Result<()> {

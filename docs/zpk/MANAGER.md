@@ -156,8 +156,10 @@ package can request changes to Alpine system packages.
 
 Services run foreground processes. Multiple desktop entries can share one service.
 An on-demand package with one native desktop entry selects it; ambiguous native entries
-require `--desktop-entry ID`. Static desktops install assets without a daemon. UI-origin
-isolation, window activation and broker integration remain unimplemented. Archives with
+require `--desktop-entry ID`. Static desktops install assets without a daemon.
+[TASK 04](APP_SDK.md) adds local desktop discovery, opaque iframe windows and a
+browser SDK. Opening a window does not start a privileged service. Authenticated
+native broker integration remains unimplemented. Archives with
 neither a service nor a desktop activation declaration are explicitly unsupported by
 the current Runtime model; one-shot jobs are not silently treated as healthy daemons.
 

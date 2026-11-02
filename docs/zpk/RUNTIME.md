@@ -22,8 +22,9 @@ or add HTTP routes. Genesis Core remains unauthenticated and read-only.
   Multiple desktop entries can resolve to the same shared service. On-demand backends
   are not added to a boot runlevel; the caller explicitly starts/stops them. A static
   desktop without a native backend has state `not-required` and no process/service.
-- UI asset publication, window lifecycle leases and authenticated desktop activation
-  are future integration work. No permanent daemon is created just to represent UI.
+- [TASK 04](APP_SDK.md) implements UI asset publication and desktop windows without
+  privileged HTTP activation. Native lifecycle leases and authenticated activation
+  remain future work. No permanent daemon is created just to represent UI.
   One-shot CLI tasks are not modeled as long-running supervised services.
 
 The shared ELF reader moved from Forge into `zpk-common` because Forge and Runtime
@@ -169,7 +170,9 @@ queries, with explicit user grants, quotas, revocation and denied-by-default pol
 No raw device handles, arbitrary shell commands or automatic NAS mounts should be
 exposed. Current seccomp denies SCM_RIGHTS sendmsg/recvmsg; future FD grants require
 a reviewed profile change and a revocation/lifetime design. No broker daemon, tokens,
-user authorization, notification service or desktop bridge is implemented here.
+user authorization or native notification broker is implemented here. TASK 04's
+browser-only desktop bridge and permission-checked notifications are separate from
+this proposed privileged native transport; see [APP_SDK.md](APP_SDK.md).
 
 Primary design references: [OpenRC supervision](https://github.com/OpenRC/openrc/blob/master/man/supervise-daemon.8),
 [OpenRC service model](https://github.com/OpenRC/openrc/blob/master/man/openrc-run.8),

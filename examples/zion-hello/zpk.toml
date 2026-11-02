@@ -1,0 +1,113 @@
+schema_version = 1
+permissions = ["desktop-ui", "notifications", "background-service", "persistent-data"]
+
+[package]
+id = "org.zionos.zion-hello"
+name = "Zion Hello"
+version = "1.0.0"
+description = "Native Alpine backend and isolated browser UI using Zion App SDK v1."
+author = "ZionOS contributors"
+license = "MIT"
+categories = ["development", "utilities"]
+
+[target]
+os = "linux"
+architecture = "x86_64"
+cpu = "x86-64-v1"
+libc = "musl"
+
+[build]
+system = "rust"
+toolchain = "Forge trusted Alpine 3.23 builder; x86-64-v1"
+reproducible = false
+
+[runtime]
+dependencies = []
+
+[compatibility]
+min_zionos = "0.6.1"
+upgrades_from = ">=0.1.0, <2.0.0"
+data_schema = 1
+conflicts = []
+replaces = []
+
+[[files]]
+path = "payload/bin/zion-hello"
+kind = "executable"
+linkage = "static"
+
+[[files]]
+path = "ui/index.html"
+kind = "ui"
+
+[[files]]
+path = "assets/zion-app-sdk.mjs"
+kind = "asset"
+
+[[files]]
+path = "assets/hello.js"
+kind = "asset"
+
+[[files]]
+path = "assets/style.css"
+kind = "asset"
+
+[[files]]
+path = "assets/icon.png"
+kind = "icon"
+
+[service]
+executable = "payload/bin/zion-hello"
+arguments = ["--serve"]
+run_as = "package"
+autostart = false
+permissions = ["background-service"]
+
+[[storage]]
+name = "state"
+kind = "data"
+schema = 1
+max_bytes = 1048576
+preserve_on_upgrade = true
+
+[[desktop]]
+id = "main"
+name = "Zion Hello"
+entry = "ui/index.html"
+icon = "assets/icon.png"
+categories = ["development", "utilities"]
+permissions = ["desktop-ui", "notifications"]
+multiple_instances = true
+[desktop.window]
+width = 760
+height = 600
+min_width = 320
+min_height = 260
+resizable = true
+
+[forge]
+version = 1
+system = "rust"
+inputs = ["Cargo.toml", "Cargo.lock", "src", "LICENSE", "ui", "assets"]
+license_file = "LICENSE"
+jobs = 2
+cargo_bin = "zion-hello"
+
+[[forge.stage]]
+from = "build/forge-app"
+to = "payload/bin/zion-hello"
+[[forge.stage]]
+from = "source/ui/index.html"
+to = "ui/index.html"
+[[forge.stage]]
+from = "source/assets/zion-app-sdk.mjs"
+to = "assets/zion-app-sdk.mjs"
+[[forge.stage]]
+from = "source/assets/hello.js"
+to = "assets/hello.js"
+[[forge.stage]]
+from = "source/assets/style.css"
+to = "assets/style.css"
+[[forge.stage]]
+from = "source/assets/icon.png"
+to = "assets/icon.png"

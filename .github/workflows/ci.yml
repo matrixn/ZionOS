@@ -2,13 +2,33 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/zion-app-sdk/package-lock.json
+      - name: SDK development tools and real browser
+        working-directory: web/zion-app-sdk
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Prepare trusted Forge BUILD environment only
+        run: cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello --prepare-builder
+      - name: SDK types/protocol and real browser integration (no host application services)
+        run: bash tests/apps/check.sh --browser
   manager:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -87,6 +107,8 @@ jobs:
             if [ -f "$script" ]; then sh -n "$script"; fi
           done
           node --check web/desktop/app.js
+          node --check web/desktop/apps/registry.js
+          node --check web/desktop/apps/bridge.js
           node --test tests/desktop.test.cjs
       - name: Guardrails
         shell: bash

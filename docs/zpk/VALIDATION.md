@@ -1,5 +1,12 @@
 # Validation and security boundaries
 
+TASK 04 adds a separately validated public desktop projection (schema 1, max 2 MiB,
+256 entries, 2048 assets per entry, 1 MiB per asset). Manager publishes only declared
+UI/scripts/styles/PNG; Core checks ownership, paths, active version and SHA-256 before
+serving. `notifications` requires both package and desktop-entry declarations.
+`multiple_instances` defaults false. See [APP_SDK.md](APP_SDK.md) for browser
+enforcement, opaque origins, read-only routes and the remaining production boundaries.
+
 The input archive and every manifest/metadata field are untrusted. Inspection runs
 as an ordinary developer user against a local regular file, in-process, and does
 not extract archives, spawn payloads, invoke a shell for package arguments, install

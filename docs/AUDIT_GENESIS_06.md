@@ -196,3 +196,12 @@ HTTP neautentificat și nu activează formatarea/provisioning-ul NAS. Verificăr
 Pentru roadmap-ul ulterior rămân autentificarea/brokerul, distribuția semnată,
 cotele agregate, backup/migrări ale datelor și integrarea persistentă de boot/UI.
 Acest milestone nu declară Genesis sau instalarea pachetelor pregătite pentru producție.
+
+## Milestone separat: App SDK (TASK 04)
+
+[SDK-ul și integrarea desktop](zpk/APP_SDK.md) adaugă registry ZPK dinamic, ferestre
+comune și UI în iframe opac, cu mesagerie verificată și API-uri browser limitate.
+Backendul exemplului este nativ OpenRC non-root; nu se adaugă instalare HTTP sau
+acces NAS. [Verificările](zpk/APP_SDK_VERIFICATION.md) includ ISO final, Chromium
+și QEMU real. Pentru producție rămân autentificarea, origini dedicate, brokerul nativ,
+cote agregate și persistența pregătită explicit. CSP nu izolează complet rețeaua.

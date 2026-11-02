@@ -65,6 +65,14 @@ explicit development trust/permission review, journal reconciliation, data prese
 and the unauthenticated API boundary intact. Do not expose fault injection in the CLI.
 
 ## Working process
+For App SDK/desktop changes read `docs/zpk/APP_SDK.md` and run
+`bash tests/apps/check.sh`, then `--browser` with Chromium and the prepared Forge
+builder. For final ISO integration run `bash scripts/build-iso.sh` followed by
+`bash tests/apps/check.sh --vm`. Never invoke its guest helper on the host. Keep
+opaque iframes, source/session validation and the read-only Core boundary intact.
+Do not claim CSP prevents all network egress, or replace typed unavailable file/settings
+APIs with fake persistence. Native broker operations require future authentication.
+
 - First summarize what the affected code currently does, identify risks, and propose a limited change.
 - Make focused edits and run available verification.
 - Report changed files, tests passed/failed/not run, remaining hazards and any manual QEMU validation needed.

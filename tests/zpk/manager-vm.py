@@ -47,18 +47,23 @@ def boot(disk,phase):
             except subprocess.TimeoutExpired: process.kill();process.wait()
         (ROOT/f'build/manager-vm-{phase}.log').write_bytes(log)
 
+def create_image(folder):
+    folder=Path(folder).resolve()
+    if not folder.is_relative_to((ROOT/'build').resolve()): raise ValueError('unexpected image workspace')
+    raw=folder/'filesystem.img';disk=folder/'persistent.qcow2'
+    if disk.exists() or disk.is_symlink(): raise ValueError('refusing to replace an existing test disk')
+    with raw.open('xb') as output:
+        if not stat.S_ISREG(os.fstat(output.fileno()).st_mode): raise ValueError('not a regular file')
+        output.truncate(512*1024*1024)
+    # This tool sees ONLY the newly created regular file, never a block device.
+    subprocess.run(['mkfs.ext4','-q','-F','-L','ZPKMGRTEST',str(raw)],check=True)
+    subprocess.run(['qemu-img','convert','-f','raw','-O','qcow2',str(raw),str(disk)],check=True)
+    raw.unlink()
+    return disk
+
 def main():
     with tempfile.TemporaryDirectory(prefix='manager-vm-',dir=ROOT/'build') as temporary:
-        folder=Path(temporary).resolve()
-        if not folder.is_relative_to((ROOT/'build').resolve()): raise ValueError('unexpected image workspace')
-        raw=folder/'filesystem.img';disk=folder/'persistent.qcow2'
-        with raw.open('xb') as output:
-            if not stat.S_ISREG(os.fstat(output.fileno()).st_mode): raise ValueError('not a regular file')
-            output.truncate(512*1024*1024)
-        # This tool sees ONLY the newly created regular file, never a block device.
-        subprocess.run(['mkfs.ext4','-q','-F','-L','ZPKMGRTEST',str(raw)],check=True)
-        subprocess.run(['qemu-img','convert','-f','raw','-O','qcow2',str(raw),str(disk)],check=True)
-        raw.unlink()
+        disk=create_image(temporary)
         boot(disk,'first');boot(disk,'second');boot(disk,'third')
     print('PASS: install/start/upgrade/rollback/reboot/uninstall/reinstall of native Forge packages')
 

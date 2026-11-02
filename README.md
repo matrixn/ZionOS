@@ -191,6 +191,35 @@ La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
 suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
 · [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
 
+## Zion App SDK & Native Desktop Integration — TASK 04
+
+- [x] Registry dinamic built-in + ZPK instalate/activate; `GET /api/apps` read-only.
+- [x] Publicare Manager atomică, verificată SHA-256; resurse limitate la UI/assets declarate.
+- [x] Ferestre comune cu drag/resize/min/max, instanțe multiple, dock/pin, căutare și tastatură.
+- [x] SDK JavaScript/ESM + TypeScript: titlu, dimensiuni, temă, notificări și confirmări.
+- [x] Iframe cu origine opacă, CSP, handshake versionat și verificarea sursei/sesiunii/permisiunilor.
+- [x] `zion-hello`: backend Rust nativ compilat prin Forge, UI și icon; OpenRC non-root.
+- [x] ISO final, Chromium desktop/mobile și instalare/dezinstalare într-un QEMU dedicat verificate.
+- [ ] Fișiere/settings SDK: răspuns tipizat `UNAVAILABLE`; brokerul autentificat rămâne viitor.
+- [ ] Autentificare Core, origini dedicate aplicațiilor și izolare completă a rețelei browserului.
+
+Implementare și comenzi: [App SDK](docs/zpk/APP_SDK.md),
+[verificări executate](docs/zpk/APP_SDK_VERIFICATION.md),
+[exemplul Zion Hello](examples/zion-hello/README.md).
+ISO-ul live păstrează built-in-urile; instalarea necesită volume persistente și CLI-ul
+local Manager/Runtime pregătit. Nu există instalare sau pornire privilegiată prin HTTP.
+
+```sh
+npm --prefix web/zion-app-sdk ci --ignore-scripts --no-audit --no-fund
+bash tests/apps/check.sh
+# Cu Chromium, builderul Forge și toolchain-urile pregătite conform ghidului:
+bash tests/apps/check.sh --browser
+bash scripts/build-iso.sh
+bash tests/apps/check.sh --vm
+# Pornire normală a ISO-ului live:
+bash scripts/run-qemu.sh
+```
+
 ## Native Package Manager — TASK 03
 
 - [x] `crates/zpk-manager`: CLI local privilegiat, registru SQLite separat de datele aplicațiilor și lock de concurență.

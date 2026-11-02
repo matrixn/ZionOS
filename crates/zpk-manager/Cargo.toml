@@ -13,6 +13,10 @@ path = "src/main.rs"
 name = "zpk-manager-guest"
 path = "../../tests/zpk/manager-guest.rs"
 
+[[bin]]
+name = "zpk-sdk-fixture"
+path = "../../tests/apps/fixture.rs"
+
 [dependencies]
 zpk-schema = { path = "../zpk-schema" }
 zpk-runtime = { path = "../zpk-runtime" }

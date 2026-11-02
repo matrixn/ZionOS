@@ -18,6 +18,12 @@ SQLite registry, durable operation intents, dependency checks, upgrades and exec
 rollback. It reuses Foundation/Runtime; no write routes are added to Zion Core. Persistent
 target filesystems and explicit trusted-local development policy are mandatory.
 
+[Zion App SDK (TASK 04)](APP_SDK.md) adds Manager's derived desktop registry,
+read-only discovery/asset routes, shared desktop windows and an opaque-iframe SDK.
+The [native Zion Hello example](../../examples/zion-hello/README.md) is tested in
+Alpine/QEMU. Files/settings and an authenticated native permission broker remain
+unavailable; the current Core API still has no authentication or write routes.
+
 **Unsigned ZPK files are limited to trusted local development. SHA-256 detects
 corruption and inventory changes; it does not authenticate publishers. An attacker
 can replace both content and checksums.** Valid inspection is not permission to run
@@ -69,7 +75,7 @@ archive validation and the requested OS/upgrade compatibility checks pass. It ex
 nonzero with a diagnostic on any failure. An optional third CLI argument is the
 installed version of the **same package**, used to check `upgrades_from` and prohibit
 downgrades/reinstall. CLI callers are responsible for providing the actual OS version
-and installed-package identity; there is no package database yet.
+and installed-package identity; this inspector does not consult Manager's database.
 
 Library use:
 
