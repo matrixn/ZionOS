@@ -222,6 +222,18 @@ fn unique_hashes<'de, D: Deserializer<'de>>(
 /// Inspect one zstd frame containing strict USTAR. No extraction, subprocesses or package execution.
 /// The caller must provide a bounded/local source: `Read` itself cannot impose a wall-clock deadline.
 pub fn inspect<R: Read>(input: R, limits: Limits) -> Result<Inspection> {
+    inspect_stream(input, limits, &mut |_, _| Ok(()))
+}
+
+/// Stream regular-file chunks through the SAME strict archive validator.
+/// The first callback for each file has an empty chunk. Callbacks happen BEFORE
+/// final integrity validation: write only into private disposable staging, never
+/// an installed tree, and discard all output on any error. No execution occurs.
+pub fn inspect_stream<R: Read>(
+    input: R,
+    limits: Limits,
+    sink: &mut dyn FnMut(&str, &[u8]) -> std::io::Result<()>,
+) -> Result<Inspection> {
     if limits.entries == 0
         || limits.compressed_bytes == 0
         || limits.expanded_bytes == 0
@@ -247,14 +259,18 @@ pub fn inspect<R: Read>(input: R, limits: Limits) -> Result<Inspection> {
         remaining: limits.expanded_bytes,
         label: "expanded",
     };
-    let result = read_tar(&mut expanded, limits)?;
+    let result = read_tar(&mut expanded, limits, sink)?;
     let mut buffered = expanded.inner.finish();
     if !buffered.fill_buf()?.is_empty() {
         return Err(bad("trailing data or concatenated zstd frame"));
     }
     Ok(result)
 }
-fn read_tar(input: &mut impl Read, limits: Limits) -> Result<Inspection> {
+fn read_tar(
+    input: &mut impl Read,
+    limits: Limits,
+    sink: &mut dyn FnMut(&str, &[u8]) -> std::io::Result<()>,
+) -> Result<Inspection> {
     let mut seen = BTreeSet::new();
     let mut manifest: Option<Manifest> = None;
     let mut files = BTreeMap::new();
@@ -358,11 +374,13 @@ fn read_tar(input: &mut impl Read, limits: Limits) -> Result<Inspection> {
         let mut hasher = Sha256::new();
         let mut left = h.size;
         let mut buffer = [0u8; 16384];
+        sink(&h.path, &[])?;
         while left > 0 {
             let n = buffer
                 .len()
                 .min(usize::try_from(left).unwrap_or(usize::MAX));
             input.read_exact(&mut buffer[..n])?;
+            sink(&h.path, &buffer[..n])?;
             hasher.update(&buffer[..n]);
             let keep = n.min(capture.saturating_sub(prefix.len()));
             prefix.extend_from_slice(&buffer[..keep]);

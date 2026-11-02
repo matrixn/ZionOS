@@ -1,0 +1,25 @@
+name: ZPK manager persistent native VM integration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  persistent-vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - name: VM/image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools qemu-system-x86 qemu-utils xorriso e2fsprogs
+      - name: Existing Genesis ISO and trusted Forge builder (Docker build only)
+        run: |
+          bash scripts/build-iso.sh
+          cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello-rust --prepare-builder
+      - name: Native install/upgrade/rollback/reboot/uninstall in QEMU
+        run: bash tests/zpk/manager-check.sh --vm

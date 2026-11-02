@@ -46,3 +46,21 @@ Real VM checks include dedicated non-root identity, capability/descriptor cleari
 Landlock/seccomp enforcement, memory/FD/process/file/CPU limits, native Unix health,
 logs, clean shutdown, state across restarts, crash respawn/exhaustion, autostart,
 stop with broken current reference, and refusal of persistent-required on live RAM.
+
+## Native manager
+
+`bash tests/zpk/manager-check.sh` runs installer/registry/dependency/UI model tests,
+strict Clippy, formatting and shell/Python syntax. Tests use private temporary roots
+and mock service operations. The crash matrix kills real child test processes using
+`_exit(77)` at 46 install/reinstall/upgrade/rollback/uninstall boundaries, then opens SQLite afresh
+and reconciles references, records, registrations and cleanup. Fault injection is a
+library test boundary, not a production CLI flag.
+
+`bash tests/zpk/manager-check.sh --vm` additionally compiles the owned Rust/C packages
+through Forge's isolated builder and runs the **native** installer/services in three QEMU
+boots sharing one dedicated disposable QCOW2, including reverse-order reinstallation
+and retained UID/data compatibility. The underlying filesystem is prepared
+only on a newly created regular image file. No physical disks or host users/services
+are used. Exact serial/QEMU/Genesis checks guard the guest shell. Runtime's older
+`--vm` suite still attaches no writable disk; these are deliberately separate tests.
+See [manager verification](../../docs/zpk/MANAGER_VERIFICATION.md).

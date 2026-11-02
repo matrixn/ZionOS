@@ -19,10 +19,14 @@ pub fn read_file(path: &Path, max: u64) -> Result<Vec<u8>> {
     #[cfg(target_os = "linux")]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        file.custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
+        file.custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK);
+    }
+    let opened = file.open(path)?;
+    if !opened.metadata()?.is_file() || opened.metadata()?.len() > max {
+        return fail("opened file is not a bounded regular file");
     }
     let mut bytes = vec![];
-    file.open(path)?.take(max + 1).read_to_end(&mut bytes)?;
+    opened.take(max + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > max {
         return fail("file limit exceeded");
     }

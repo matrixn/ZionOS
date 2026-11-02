@@ -13,6 +13,11 @@ lifecycle through OpenRC and tested Linux policy layers. Real integration uses a
 disposable QEMU VM, not a runtime container. No package installer or authenticated
 Core API bridge is included.
 
+[Native Package Manager (TASK 03)](MANAGER.md) adds the local administrator installer,
+SQLite registry, durable operation intents, dependency checks, upgrades and executable
+rollback. It reuses Foundation/Runtime; no write routes are added to Zion Core. Persistent
+target filesystems and explicit trusted-local development policy are mandatory.
+
 **Unsigned ZPK files are limited to trusted local development. SHA-256 detects
 corruption and inventory changes; it does not authenticate publishers. An attacker
 can replace both content and checksums.** Valid inspection is not permission to run
@@ -95,8 +100,10 @@ bash scripts/build-core.sh
 
 ## Next boundaries
 
-Before installation: authenticated publisher policy, trusted repository/index design,
-dependency/conflict resolution, dedicated package users, capability enforcement,
-desktop origin isolation, transactional staging, upgrades and rollback/recovery.
+Before production distribution: authenticated publisher policy, trusted repository/index
+design, aggregate resource quotas, application-aware data migrations/backups,
+desktop origin isolation and an authenticated permission broker. Local development
+installation, dedicated identities, dependency checks and executable transactions are
+implemented separately in Manager/Runtime, with their documented limitations.
 Do not turn the current declaration parser into privileged execution of package
 scripts. There are no lifecycle scripts, root services or HTTP write endpoints here.

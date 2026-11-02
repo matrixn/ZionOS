@@ -2,13 +2,23 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  manager:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Transaction, crash recovery and mock installer checks (no host services)
+        run: bash tests/zpk/manager-check.sh
   runtime:
     runs-on: ubuntu-latest
     steps:

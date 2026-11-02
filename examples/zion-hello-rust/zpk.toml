@@ -1,5 +1,5 @@
 schema_version = 1
-permissions = []
+permissions = ["background-service", "persistent-data"]
 
 [package]
 id = "org.zionos.zion-hello-rust"
@@ -36,6 +36,20 @@ path = "payload/bin/zion-hello-rust"
 kind = "executable"
 linkage = "static"
 permissions = []
+
+[service]
+executable = "payload/bin/zion-hello-rust"
+arguments = ["--serve"]
+run_as = "package"
+autostart = false
+permissions = ["background-service"]
+
+[[storage]]
+name = "state"
+kind = "data"
+schema = 1
+max_bytes = 1048576
+preserve_on_upgrade = true
 
 [forge]
 version = 1

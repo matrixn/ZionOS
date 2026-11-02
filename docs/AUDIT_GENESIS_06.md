@@ -186,3 +186,13 @@ Comenzile complete de build/rulare/test sunt în [README](../README.md).
 
 Actualizarea următoare de pe `main`, cu loader animat și verificările sale, este
 documentată separat în [Consola de boot](BOOT_CONSOLE.md).
+
+## Milestone separat: ZPK Manager (TASK 03)
+
+Pe `feat/zpk-manager`, [managerul local](zpk/MANAGER.md) implementează instalarea de
+dezvoltare cu SQLite, tranzacții/reconciliere și Runtime nativ OpenRC. Nu extinde API-ul
+HTTP neautentificat și nu activează formatarea/provisioning-ul NAS. Verificările sunt
+în [raportul managerului](zpk/MANAGER_VERIFICATION.md), separat de auditul Genesis.
+Pentru roadmap-ul ulterior rămân autentificarea/brokerul, distribuția semnată,
+cotele agregate, backup/migrări ale datelor și integrarea persistentă de boot/UI.
+Acest milestone nu declară Genesis sau instalarea pachetelor pregătite pentru producție.

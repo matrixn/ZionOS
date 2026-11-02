@@ -11,6 +11,7 @@ Read the actual source before modifying it. Do not rely solely on patch names, R
 - `crates/zpk-forge/` — developer build CLI; third-party compilation only inside its constrained Docker builder, never on the host. No installation or privileged hooks.
 - `crates/zpk-runtime/` — native OpenRC runtime; no runtime containers. Host unit tests must use mock OpenRC operations and temporary roots. Run real identity/service/security tests only in the guarded disposable QEMU fixture.
 - `crates/zpk-common/` — shared ELF inspection used by Forge and Runtime; no process execution.
+- `crates/zpk-manager/` — local privileged package coordinator, SQLite registry/journal and Runtime adapter. Never run real installer/identity/service actions on the developer host. Unit tests use temporary roots and mock services; native integration uses only the guarded disposable persistent QEMU fixture.
 - `web/desktop/` — lightweight operating-system-style browser desktop and assets.
 - `platform/alpine/` — Alpine ISO profile, generated apk overlay, OpenRC startup configuration, lab utilities and branding.
 - `scripts/` — staging, ISO build, QEMU and testing.
@@ -55,6 +56,13 @@ the Genesis ISO/QEMU/musl/xorriso, `bash tests/zpk/runtime-check.sh --vm`. Never
 the guest fixture shell or native runtime administration against the developer host.
 Runtime grants must fail closed without required Linux controls; document rlimit vs
 aggregate quota, declaration vs enforcement, and process-restart vs reboot persistence.
+
+For manager changes run `bash tests/zpk/manager-check.sh` and, with a prepared Forge
+builder/Genesis ISO/QEMU/image tools, `bash tests/zpk/manager-check.sh --vm`. Its only
+writable drive is a newly created dedicated QCOW2 whose filesystem was formatted on
+a regular file, never a physical block device. Keep production persistence refusal,
+explicit development trust/permission review, journal reconciliation, data preservation
+and the unauthenticated API boundary intact. Do not expose fault injection in the CLI.
 
 ## Working process
 - First summarize what the affected code currently does, identify risks, and propose a limited change.

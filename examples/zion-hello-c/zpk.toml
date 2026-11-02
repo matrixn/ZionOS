@@ -1,5 +1,5 @@
 schema_version = 1
-permissions = []
+permissions = ["background-service", "persistent-data"]
 
 [package]
 id = "org.zionos.zion-hello-c"
@@ -36,6 +36,20 @@ path = "payload/bin/zion-hello-c"
 kind = "executable"
 linkage = "musl-dynamic"
 permissions = []
+
+[service]
+executable = "payload/bin/zion-hello-c"
+arguments = ["--serve"]
+run_as = "package"
+autostart = false
+permissions = ["background-service"]
+
+[[storage]]
+name = "state"
+kind = "data"
+schema = 1
+max_bytes = 1048576
+preserve_on_upgrade = true
 
 [forge]
 version = 1

@@ -191,6 +191,38 @@ La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
 suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
 · [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
 
+## Native Package Manager — TASK 03
+
+- [x] `crates/zpk-manager`: CLI local privilegiat, registru SQLite separat de datele aplicațiilor și lock de concurență.
+- [x] Install/list/info/start/stop/restart/status/logs/upgrade/rollback/uninstall/verify și `repair --plan`.
+- [x] Tranzacții `PREPARED → STAGED → ACTIVATING → COMMITTED`, stări FAILED/RECOVERY_REQUIRED,
+  fsync, publicare fără suprascriere, compensare și reconciliere după întrerupere.
+- [x] Validare și extracție prin Foundation, identități/servicii native prin Runtime;
+  resolver offline pentru versiuni, dependențe lipsă/cicluri/conflicte și dependențe inverse.
+- [x] Politică explicită pentru pachete locale nesemnate și aprobarea exactă a permisiunilor;
+  filesystem-urile live/RAM sunt refuzate pentru instalare persistentă.
+- [x] Versiuni alăturate și rollback de executabile; date/config/loguri și identități păstrate la uninstall.
+- [x] Metadate pentru datele păstrate: UID/GID și schema rămân rezervate după uninstall/reboot;
+  reinstalarea incompatibilă este refuzată.
+- [x] Modele UI static/on-demand/backend comun; selecție explicită pentru executabile desktop ambigue.
+- [x] Exemplele Forge Rust/C au mod foreground `--serve`, socket Unix și contor persistent;
+  rularea obișnuită fără argumente rămâne print-and-exit.
+- [x] Teste de instalator cu servicii mock, 46 de întreruperi reale de proces și test QEMU
+  cu trei boot-uri pe același QCOW2 dedicat, inclusiv reinstalare în ordine inversă.
+- [ ] Catalog semnat, broker/UI autentificat, migrări de date, ștergerea datelor,
+  activări multi-pachet și garanții la pierderea alimentării: neimplementate/nevalidate.
+
+Nu există endpoint-uri HTTP de instalare, instalare pe hostul Windows/WSL sau runtime Docker.
+Managerul nu este adăugat automat în ISO. Persistența și configurația de boot trebuie
+pregătite separat. [Arhitectură și comenzi](docs/zpk/MANAGER.md)
+· [Verificări și limite](docs/zpk/MANAGER_VERIFICATION.md).
+
+```bash
+bash tests/zpk/manager-check.sh
+# Necesită ISO-ul Genesis, builderul Forge pregătit, QEMU/musl/xorriso/e2fsprogs:
+bash tests/zpk/manager-check.sh --vm
+```
+
 ## Native ZPK Runtime — TASK 02
 
 - [x] `crates/zpk-runtime`: model de configurare administrator, lifecycle nativ și adaptor OpenRC extensibil.
