@@ -1,5 +1,8 @@
 # Audit Genesis 0.6 și roadmap
 
+Acesta este raportul istoric 0.6. Pentru starea curentă, remedierile riscurilor
+de mai jos și verificările noi, vezi [Genesis 0.6.1](GENESIS_061.md).
+
 Data: 2026-11-02. Branch: `codex/genesis-06-audit`.
 Scop: audit de inginerie pe sursele locale, remedieri limitate, branding initramfs
 solicitat ulterior, teste, build și publicarea ramurii autorizate. Nu este o

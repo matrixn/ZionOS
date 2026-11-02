@@ -1,7 +1,7 @@
 # ZionOS — instructions for coding agents
 
 ## Mission and current state
-ZionOS is an experimental, bootable NAS appliance OS built on Alpine Linux 3.23 (OpenRC and an Alpine LTS kernel), a Rust/Axum `zion-core` service, and a browser-based desktop shell. Genesis 0.6 includes read-only disk and pool discovery and a **restricted QEMU-only provisioning lab**. It is **not production-ready**.
+ZionOS is an experimental, bootable NAS appliance OS built on Alpine Linux 3.23 (OpenRC and an Alpine LTS kernel), a Rust/Axum `zion-core` service, and a browser-based desktop shell. Genesis 0.6.1 includes read-only disk and pool discovery and a **restricted QEMU-only inspection lab**. Provisioning `--apply` is disabled pending a verified exclusive executor. It is **not production-ready**.
 
 Read the actual source before modifying it. Do not rely solely on patch names, README milestones, or prior assumptions. Preserve working boot, DHCP, OpenRC and API behavior.
 
@@ -15,7 +15,7 @@ Read the actual source before modifying it. Do not rely solely on patch names, R
 
 ## Security and data-loss rules — mandatory
 1. Never format, partition, wipe, mount read-write, repair or otherwise modify a physical block device for testing. Do not use host block-device passthrough.
-2. For provisioning tests use only dedicated disposable QCOW2 images attached to QEMU; the existing lab tool targets a verified virtual `/dev/vdb`, with an explicit interactive erase confirmation.
+2. For provisioning tests use only dedicated disposable QCOW2 images attached to QEMU; the lab tool inspects a session-identified virtual `/dev/vdb`. Keep `--apply` disabled in 0.6.1. Future erase execution requires a separately verified exclusive executor and explicit interactive erase confirmation.
 3. Keep web storage endpoints read-only. Do not add destructive HTTP routes while authentication, authorization, audited operations and recovery guarantees are missing.
 4. Do not expose the unauthenticated API to the public network; local QEMU forwarding must bind the host side to `127.0.0.1`.
 5. Never commit credentials, signing keys, `.env` files, disk images, ISO outputs, backups or build logs. Never print secrets to logs.

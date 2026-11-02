@@ -8,10 +8,10 @@ depend() {
 
 start() {
     if [ -t 1 ]; then
-        printf '\033[1;36m\n  ZION OS\033[0m \033[1;37mGenesis 0.6\033[0m \033[2m(AL 3.23 · Linux LTS)\033[0m\n'
+        printf '\033[1;36m\n  ZION OS\033[0m \033[1;37mGenesis 0.6.1\033[0m \033[2m(AL 3.23 · Linux LTS)\033[0m\n'
         printf '\033[0;36m  -----------------------------------------------------\033[0m\n'
     else
-        printf '\n  ZION OS Genesis 0.6 (AL 3.23 · Linux LTS)\n'
+        printf '\n  ZION OS Genesis 0.6.1 (AL 3.23 · Linux LTS)\n'
     fi
     einfo "[BOOT 1/4] Identitate: configurăm hostname-ul din /etc/hostname pentru identificarea NAS-ului."
     einfo "[BOOT 2/4] Hardware: inițializăm driverele și dispozitivele bloc detectate."

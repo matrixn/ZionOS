@@ -1,5 +1,9 @@
 # Consola de boot ZionOS
 
+Raportul de mai jos documentează implementarea inițială din 0.6. Consola este păstrată
+în 0.6.1; numele ISO, accelerarea QEMU și verificările curente sunt în
+[raportul 0.6.1](GENESIS_061.md) și [README](../README.md).
+
 Actualizare 2026-11-02, pe `main`. Înlocuiește cele două bannere mici cu un
 logo ASCII mare, un panou ANSI și un loader pentru etapele OpenRC reale.
 

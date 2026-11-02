@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export EXPECTED_ZION_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$ROOT/core/api/Cargo.toml")"
 BASE="${1:-http://127.0.0.1:8080}"
 curl -fsS --max-time 8 "$BASE/api/health" | python3 -c '
-import json,sys
+import json,sys,os
 j=json.load(sys.stdin)
 assert j["status"]=="ok" and j["readonly"] is True
-assert j["version"]=="0.6.0", j
+assert j["version"]==os.environ["EXPECTED_ZION_VERSION"], j
 '
 curl -fsS --max-time 8 "$BASE/api/metrics" | python3 -c '
 import json,sys
@@ -17,6 +19,7 @@ import json,sys
 j=json.load(sys.stdin)
 assert j["mode"]=="read-only" and isinstance(j["disks"],list)
 assert isinstance(j["mounts"],list)
+assert isinstance(j["complete"],bool)
 '
 curl -fsS --max-time 30 "$BASE/api/pools" | python3 -c '
 import json,sys
@@ -40,9 +43,10 @@ grep -q 'data-plan-disks' "$TMP/index.html"
 grep -q '/api/pools' "$TMP/app.js"
 if command -v node >/dev/null 2>&1; then node --check "$TMP/app.js"; fi
 curl -fsS --max-time 8 "$BASE/api/provisioning" | python3 -c '
-import json,sys
+import json,sys,os
 j=json.load(sys.stdin)
-assert j["version"]=="0.6.0" and j["mode"]=="read-only"
+assert j["version"]==os.environ["EXPECTED_ZION_VERSION"] and j["mode"]=="read-only"
+assert j["execution_enabled"] is False and j["eligible_for_lab"] is False
 assert j["recovery"]["automatic_repairs"] is False
 assert j["recovery"]["recovery_point_available"] is False
 '
@@ -52,4 +56,4 @@ for route in health metrics storage pools provisioning; do
   status="$(curl -sS --max-time 8 -o /dev/null -w '%{http_code}' -X POST "$BASE/api/$route")"
   [ "$status" = 405 ] || { echo "Unexpected POST status for $route: $status"; exit 1; }
 done
-echo 'PASS: Genesis 0.6 health, metrics, storage, pools, provisioning read-only and recovery guidance' 
+echo "PASS: Genesis $EXPECTED_ZION_VERSION health, metrics, storage, pools, provisioning read-only and recovery guidance"

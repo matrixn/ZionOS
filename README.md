@@ -1,11 +1,16 @@
-# ZionOS Genesis 0.6 — NAS experimental
+# ZionOS Genesis 0.6.1 — NAS experimental
 
 ZionOS este un sistem NAS live/diskless: Alpine Linux 3.23, kernel Alpine LTS,
 OpenRC, API Rust/Axum și desktop în browser. **Nu este pregătit pentru producție.**
 Configurația live nu persistă după reboot. API-ul nu are autentificare și trebuie
 folosit numai în QEMU izolat, prin forwarding local `127.0.0.1:8080`.
 
-## Checklist cumulativ: Genesis 0.1–0.6
+**0.6.1 suspendă `zion-lab-provision --apply`.** Planul și diagnosticul rămân
+read-only; API-ul nu autorizează scrieri. Revalidarea shell din 0.6 nu elimina
+cursa dintre verificare și formatare. Un executor exclusiv verificat este cerință
+pentru 0.7. [Raportul 0.6.1](docs/GENESIS_061.md) descrie remedierile și limitele.
+
+## Checklist cumulativ: Genesis 0.1–0.6.1
 
 Istoricul a fost reconciliat cu conversația inițială „Utilitatea unui OS multiplatformă”
 și cu sursele actuale. `[x]` indică implementare prezentă; verificările sunt raportate
@@ -17,7 +22,7 @@ separat. Nu presupune că toate scenariile hardware au fost validate.
 - [x] OpenRC: `sysinit`, `boot`, `default`, shutdown; `eth0` cu DHCP și loopback.
 - [x] Serviciu `zion-core` executat ca `nobody:nobody` și `GET /api/health`.
 - [x] Staging Rust musl, build ISO Docker și launcher QEMU.
-- [x] API pe interfața guest; forwarding host limitat la localhost.
+- [x] API local implicit; acces guest numai prin contractul explicit QEMU izolat.
 
 ### Genesis 0.2 — Hardware Dashboard
 
@@ -58,7 +63,7 @@ separat. Nu presupune că toate scenariile hardware au fost validate.
 - [x] `GET /api/provisioning`: preflight parțial și recomandări read-only.
 - [x] Launcher cu QCOW2 separat pentru `/dev/vdb` în QEMU.
 - [x] `zion-lab-provision --plan`: validare fără scriere.
-- [x] Cale CLI manuală `--apply`: ext4 numai pe vdb, verificări și confirmare interactivă.
+- [ ] Calea CLI `--apply` din 0.6 este suspendată în 0.6.1 până la un executor sigur.
 - [x] Refuz pentru vendor non-QEMU, dimensiuni nepermise, partiții, mount-uri,
   holders și semnături detectate; revalidare înaintea operației manuale.
 - [x] `zion-lab-recover --check`: `e2fsck -fn`, fără reparații automate.
@@ -89,8 +94,8 @@ separat. Nu presupune că toate scenariile hardware au fost validate.
 
 Brandingul initramfs precede OpenRC; mesajele bootloader-ului și kernelului pot apărea
 înaintea lui. Bannerul anunță etapele următoare, nu succesul lor. `/etc/os-release`
-păstrează identitatea Alpine. Versiunile schemelor API rămân compatibile: health și
-provisioning `0.6.0`, storage `0.4.0`, pools `0.5.0`.
+păstrează identitatea Alpine. Health și provisioning raportează `0.6.1`;
+storage păstrează schema `0.4.0`, pools `0.5.0`, cu câmpuri suplimentare explicite.
 
 ## Consolă animată — actualizare după audit
 
@@ -106,6 +111,27 @@ provisioning `0.6.0`, storage `0.4.0`, pools `0.5.0`.
 Intro-ul din initramfs este static; animația acoperă OpenRC, inclusiv verificarea modloop.
 Detalii, mod verbose, loguri și limite: [Consola de boot](docs/BOOT_CONSOLE.md).
 
+## Genesis 0.6.1 — siguranță și performanță
+
+- [x] Guard Rust comun API/CLI: identitate de sesiune, VirtIO, block device și major:minor,
+  capacitate, read-only/removable, partiții, holders/slaves, mount-uri și swap.
+- [x] Erori de inventar/probe refuzate; aliasurile mount/swap nu se compară prin substring.
+- [x] Launcher lab cu QCOW2 nou la fiecare pornire, serial aleator și poziții PCI stabile.
+- [x] Probe privilegiate pe descriptor read-only exclusiv; header exact și erori blkid
+  distincte de semnătură absentă; recovery cere ext4 și rulează numai `e2fsck -fn`.
+- [x] API pe loopback implicit; QEMU necesită contract fw_cfg, peer gateway permis,
+  verificări Host/Origin și limită de cereri concurente. Acestea nu înlocuiesc autentificarea.
+- [x] Cache comun storage/pools de 5s, SMART de 30s, preflight lab de 3s;
+  o colectare în zbor și bugete globale. Un worker blocat nu este duplicat.
+- [x] UI elimină informația lab expirată la erori, unește cererile simultane și
+  suspendă polling-ul periodic când tabul este ascuns; storage și când fereastra este minimizată.
+- [x] Capacity Lab: validarea numărului de discuri, dublurilor și overflow-ului; teste JS.
+- [x] Cargo cache pe filesystem WSL nativ; builder Alpine la digest și aports la commit fixat.
+- [x] Cache ISO invalidat prin conținut/permisiuni/cheie publică; manifest SHA256/provenance.
+- [x] ISO validat înainte de publicare atomică: rebuild-ul nu rescrie imaginea deschisă de VM.
+- [x] KVM automat când poate crea o VM; fallback TCG; parametrii de disc/rețea nu pot fi suprascriși.
+- [ ] Auth/TLS, rate limiting per client, executor de formatare, restaurare și teste fizice.
+
 ## Build și teste: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,
@@ -119,29 +145,44 @@ cargo test --manifest-path core/api/Cargo.toml
 cargo clippy --manifest-path core/api/Cargo.toml --all-targets -- -D warnings
 bash tests/check-safety.sh
 node --check web/desktop/app.js
+node --test tests/desktop.test.cjs
 bash scripts/build-core.sh
 bash scripts/build-iso.sh
 ```
 
-Build-ul ISO folosește un container privilegiat de încredere; cheile temporare de
-semnare APK rămân în container. ISO, QCOW2 și loguri rămân în `build/`, ignorate de Git.
-Ramura Alpine `3.23-stable` și pachetele nu sunt fixate la digest/versiune exactă;
-build-ul nu este încă reproductibil byte-for-byte.
+Build-ul ISO folosește un container privilegiat de încredere. Cache-ul și cheia privată
+locală APK rămân în volumul Docker `zionos-build-cache-<workspace-id>`, în afara Git;
+cheia publică intră în imagine. Nu șterge volumul dacă vrei să păstrezi cheia/cache-ul.
+Cargo folosește `~/.cache/zionos/<workspace-id>/cargo`, cu override `CARGO_TARGET_DIR`.
+ISO, manifest, QCOW2 și loguri rămân în `build/`, ignorate de Git. Pachetele APK sunt
+încă furnizate din repository mobil: pinning-ul builder/aports nu face build-ul
+reproductibil byte-for-byte și manifestul nu este un SBOM complet al sistemului live.
+
+Măsurat local: prima populare a cache-ului ISO **280s**, rebuild cu cache **21–25s**,
+cu aceeași imagine de aproximativ **352 MiB**, fără eliminarea firmware-ului/modulelor.
+Boot și smoke: **36s KVM**, **159s TCG/Conroe**. Prima încercare TCG a avut un
+kernel panic timpuriu; reluarea aceleiași imagini a trecut. Cauza rămâne de investigat,
+vezi raportul 0.6.1; compatibilitatea pe hardware fizic nu este certificată.
 
 ## Rulare și verificare ISO
 
 ```bash
 # Automat: boot, branding, DHCP, API și assets; fără provisioning distructiv.
 bash scripts/test-vm.sh
-# Același test cu CPU emulat din familia Core 2 Duo.
-bash scripts/test-vm.sh -cpu Conroe
+# Compatibilitate ISA Core 2 Duo prin emulare strictă, fără KVM.
+ZION_QEMU_ACCEL=tcg bash scripts/test-vm.sh -cpu Conroe
 # Interactiv, cu fereastră QEMU.
 bash scripts/run-qemu.sh
 # Alternativ: numai consolă, fără GUI.
 bash scripts/run-qemu.sh -display none
+# Forțează accelerarea (eșuează explicit dacă KVM nu este accesibil).
+ZION_QEMU_ACCEL=kvm bash scripts/run-qemu.sh -display none
 ```
 
 Oprește VM-ul înainte de a porni următorul: toate folosesc portul 8080.
+În WSL, utilizatorul `matrixn` a fost adăugat cu autorizare în grupul `kvm`;
+terminalele existente pot necesita redeschidere sau `newgrp kvm`. Launcherul afișează
+acceleratorul ales. KVM accelerează rularea, dar nu validează emularea ISA Conroe.
 În consola serială, `Ctrl+A`, apoi `X` închide QEMU. Pentru un ISO ales explicit:
 
 ```bash
@@ -167,15 +208,23 @@ Inspecție nedistructivă a laboratorului:
 bash scripts/run-qemu-lab.sh
 # În consola guest, numai pe discul virtual dedicat:
 zion-lab-provision --plan
+# Automat, separat de VM-ul interactiv:
+bash scripts/test-vm.sh --lab
+python3 tests/lab-console.py
 ```
 
-Nu folosi disk passthrough sau discuri fizice. Vendorul QEMU și header-ul gol nu
-dovedesc că întregul disc este nou; vezi riscurile rămase în raport.
+Nu folosi disk passthrough sau discuri fizice. Header-ul gol nu dovedește că întregul
+disc este nou. `inspection_ready` indică numai preflight parțial, nu eligibilitate
+pentru scrieri; `execution_enabled` și `eligible_for_lab` sunt permanent `false`.
+Diagnosticul `zion-lab-recover --check` refuză discul lab gol: cere ext4 confirmat.
+Nu rula mai multe VM-uri simultan. QCOW2-urile lab sunt păstrate în `build/disks/lab.*`
+pentru inspecție și nu sunt refolosite automat.
 
 ## Rezultate și roadmap
 
-- [x] Rust: 19 teste, rustfmt și Clippy cu `-D warnings`.
-- [x] 13 teste de siguranță și consolă pe fixture-uri, fără dispozitive bloc.
+- [x] Rust: 33 teste, rustfmt și Clippy cu `-D warnings`.
+- [x] 16 teste de siguranță/consolă/cache pe fixture-uri, fără dispozitive bloc.
+- [x] 3 teste JavaScript: capacitate, erori lab și cereri simultane.
 - [x] Sintaxă Bash, shell Alpine/OpenRC și `node --check` pentru desktopul activ.
 - [x] Build release musl și staging.
 - [x] Build final ISO și verificarea `/init` din imaginea produsă.
@@ -184,9 +233,10 @@ dovedesc că întregul disc este nou; vezi riscurile rămase în raport.
 - [ ] Validare vizuală interactivă a desktopului și teste pe hardware fizic.
 - [ ] Teste distructive CLI, repair/rollback, RAID1 real: neexecutate.
 
-**0.6.1:** siguranța CLI, acoperirea testelor, bugetul probelor și izolarea API.
-**0.7:** planuri Rust Single/RAID1, identități stabile, simulare și diagnostic structurat;
-execuție numai în lab, web în continuare read-only.
+**0.6.1:** guard comun, apply suspendat, izolarea API, bugete/cache și build/KVM mai rapide.
+**0.7 P1:** planuri Rust Single/RAID1, executor exclusiv cu identitate fixată și dovezi
+de recuperare; **P2:** fault injection, rezultate recovery exportabile, wizard și
+snapshot-uri APK/SBOM. Web rămâne read-only. [Criterii și limite](docs/GENESIS_061.md).
 
 [Audit, fișiere modificate, riscuri și criterii de acceptare](docs/AUDIT_GENESIS_06.md).
 

@@ -12,7 +12,7 @@ const MAX_DISKS: usize = 32;
 const MAX_PARTITIONS: usize = 128;
 const SMART_TIMEOUT: Duration = Duration::from_secs(3);
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct StorageSnapshot {
     pub version: &'static str,
     pub mode: &'static str,
@@ -20,6 +20,7 @@ pub struct StorageSnapshot {
     pub disks: Vec<DiskDetail>,
     pub mounts: Vec<MountInfo>,
     pub warnings: Vec<String>,
+    pub complete: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -35,6 +36,25 @@ pub struct DiskDetail {
     pub physical_sector_bytes: Option<u64>,
     pub partitions: Vec<Partition>,
     pub smart: SmartInfo,
+    pub signature: SignatureInfo,
+}
+
+#[derive(Clone, Serialize)]
+pub struct SignatureInfo {
+    pub status: String,
+    pub filesystem: Option<String>,
+    pub uuid: Option<String>,
+    pub label: Option<String>,
+}
+impl SignatureInfo {
+    pub fn unavailable(status: &str) -> Self {
+        Self {
+            status: status.into(),
+            filesystem: None,
+            uuid: None,
+            label: None,
+        }
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -47,6 +67,7 @@ pub struct Partition {
     pub uuid: Option<String>,
     pub label: Option<String>,
     pub mounts: Vec<String>,
+    pub signature_status: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -116,7 +137,9 @@ fn parse_mountinfo(data: &str) -> Vec<MountInfo> {
             continue;
         }
         // We display only mounted block filesystems. Virtual filesystems (proc, sysfs, etc.) are omitted.
-        if !b[1].starts_with("/dev/") {
+        // Device identity is field 3, not the textual source (which may be UUID= or /dev/root).
+        let block = crate::lab::dev_number(a[2]).is_ok_and(|(major, _)| major != 0);
+        if !block && b[0] != "btrfs" && !b[1].starts_with("/dev/") {
             continue;
         }
         let point = escape_decode(a[4]);
@@ -186,17 +209,16 @@ fn transport(name: &str, root: &Path) -> String {
     }
 }
 
-fn scan_partitions(root: &Path, mounts: &[MountInfo]) -> Vec<Partition> {
+fn scan_partitions(root: &Path, mounts: &[MountInfo]) -> std::io::Result<Vec<Partition>> {
     let mut out = Vec::new();
-    let Ok(entries) = fs::read_dir(root) else {
-        return out;
-    };
-    for entry in entries.flatten() {
+    let entries = fs::read_dir(root)?;
+    for entry in entries {
+        let entry = entry?;
         if out.len() >= MAX_PARTITIONS {
             break;
         }
         let path = entry.path();
-        if !path.join("partition").exists() {
+        if !path.join("partition").try_exists()? {
             continue;
         }
         let name = entry.file_name().to_string_lossy().into_owned();
@@ -219,37 +241,55 @@ fn scan_partitions(root: &Path, mounts: &[MountInfo]) -> Vec<Partition> {
             uuid: None,
             label: None,
             mounts: matching.iter().map(|m| m.mountpoint.clone()).collect(),
+            signature_status: "not-probed".into(),
         });
     }
     out.sort_by_key(|a| a.start_bytes);
-    out
+    Ok(out)
 }
 
-async fn probe_blkid(part: &mut Partition) {
+fn parse_blkid(code: Option<i32>, output: &[u8], errors: &[u8]) -> SignatureInfo {
+    if !errors.is_empty() {
+        return SignatureInfo::unavailable("unavailable");
+    }
+    match code {
+        Some(2) if output.is_empty() => return SignatureInfo::unavailable("none"),
+        Some(8) => return SignatureInfo::unavailable("ambiguous"),
+        Some(0) if !output.is_empty() && output.len() <= 65_536 => {}
+        _ => return SignatureInfo::unavailable("unavailable"),
+    }
+    let mut info = SignatureInfo::unavailable("detected");
+    for line in String::from_utf8_lossy(output).lines() {
+        if let Some((key, value)) = line.split_once('=') {
+            match key {
+                "TYPE" => info.filesystem = Some(value.into()),
+                "UUID" => info.uuid = Some(value.into()),
+                "LABEL" => info.label = Some(value.into()),
+                _ => {}
+            }
+        }
+    }
+    info
+}
+
+async fn probe_blkid(name: &str) -> SignatureInfo {
     // blkid reads superblocks for inventory; no filesystem changes are made.
-    let path = format!("/dev/{}", part.name);
-    if !Path::new(&path).exists() {
-        return;
+    let path = format!("/dev/{name}");
+    probe_blkid_path(Path::new(&path)).await
+}
+async fn probe_blkid_path(path: &Path) -> SignatureInfo {
+    if !path.exists() {
+        return SignatureInfo::unavailable("unavailable");
     }
     let mut command = Command::new("blkid");
     command
-        .args(["-p", "-o", "export", &path])
+        .args(["-p", "-o", "export"])
+        .arg(path)
         .kill_on_drop(true);
-    if let Ok(Ok(out)) = timeout(Duration::from_secs(2), command.output()).await {
-        for row in String::from_utf8_lossy(&out.stdout).lines() {
-            if let Some((key, value)) = row.split_once('=') {
-                match key {
-                    "TYPE" => {
-                        if part.filesystem.is_none() {
-                            part.filesystem = Some(value.to_string());
-                        }
-                    }
-                    "UUID" => part.uuid = Some(value.to_string()),
-                    "LABEL" => part.label = Some(value.to_string()),
-                    _ => {}
-                }
-            }
-        }
+    match timeout(Duration::from_secs(2), command.output()).await {
+        Ok(Ok(out)) => parse_blkid(out.status.code(), &out.stdout, &out.stderr),
+        Err(_) => SignatureInfo::unavailable("timeout"),
+        _ => SignatureInfo::unavailable("unavailable"),
     }
 }
 
@@ -338,23 +378,31 @@ async fn probe_smart(disk: &str) -> SmartInfo {
     }
 }
 
-pub async fn snapshot() -> StorageSnapshot {
-    snapshot_inner(true).await
-}
-
-/// Fast storage inventory for pool topology, deliberately without SMART probing.
-pub async fn snapshot_without_smart() -> StorageSnapshot {
-    snapshot_inner(false).await
-}
-
-async fn snapshot_inner(with_smart: bool) -> StorageSnapshot {
+fn inventory_files() -> StorageSnapshot {
     let mut warnings = Vec::new();
-    let mounts = parse_mountinfo(&read_text("/proc/self/mountinfo"));
+    let mount_text = match fs::read_to_string("/proc/self/mountinfo") {
+        Ok(text) => text,
+        Err(error) => {
+            warnings.push(format!("Mount table unavailable: {error}"));
+            String::new()
+        }
+    };
+    if crate::lab::mounted_devices(&mount_text).is_err() {
+        warnings.push("Mount table is incomplete".into());
+    }
+    let mounts = parse_mountinfo(&mount_text);
     let mut disks = Vec::new();
     match fs::read_dir("/sys/block") {
         Err(_) => warnings.push("/sys/block nu este disponibil".into()),
         Ok(entries) => {
-            for entry in entries.flatten() {
+            for entry in entries {
+                let entry = match entry {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        warnings.push(format!("Device entry unavailable: {error}"));
+                        continue;
+                    }
+                };
                 if disks.len() >= MAX_DISKS {
                     warnings.push("Lista a fost limitată la 32 de dispozitive".into());
                     break;
@@ -368,15 +416,22 @@ async fn snapshot_inner(with_smart: bool) -> StorageSnapshot {
                     continue;
                 }
                 let path = entry.path();
-                let mut partitions = scan_partitions(&path, &mounts);
-                for partition in &mut partitions {
-                    probe_blkid(partition).await;
-                }
-                let smart = if with_smart {
-                    probe_smart(&name).await
-                } else {
-                    SmartInfo::unavailable("SMART is not requested for pool topology")
+                let mut partitions = match scan_partitions(&path, &mounts) {
+                    Ok(parts) => parts,
+                    Err(error) => {
+                        warnings.push(format!(
+                            "Partition topology unavailable for {name}: {error}"
+                        ));
+                        Vec::new()
+                    }
                 };
+                let already: usize = disks.iter().map(|d: &DiskDetail| d.partitions.len()).sum();
+                if partitions.len() >= MAX_PARTITIONS || already + partitions.len() > MAX_PARTITIONS
+                {
+                    warnings.push("Global partition inventory limit reached (128)".into());
+                }
+                partitions.truncate(MAX_PARTITIONS.saturating_sub(already));
+                let smart = SmartInfo::unavailable("SMART is not requested for pool topology");
                 disks.push(DiskDetail {
                     model: read_text(path.join("device/model")),
                     size_bytes: read_num(path.join("size")).unwrap_or(0).saturating_mul(512),
@@ -389,11 +444,13 @@ async fn snapshot_inner(with_smart: bool) -> StorageSnapshot {
                     name,
                     partitions,
                     smart,
+                    signature: SignatureInfo::unavailable("not-probed"),
                 });
             }
         }
     }
     disks.sort_by(|a, b| a.name.cmp(&b.name));
+    let complete = warnings.is_empty();
     StorageSnapshot {
         version: "0.4.0",
         mode: "read-only",
@@ -404,12 +461,194 @@ async fn snapshot_inner(with_smart: bool) -> StorageSnapshot {
         disks,
         mounts,
         warnings,
+        complete,
     }
+}
+
+static BASE_CACHE: crate::cache::Cache<StorageSnapshot> = crate::cache::Cache::new();
+type SmartRecords = Vec<(String, u64, String, SmartInfo)>;
+static SMART_CACHE: crate::cache::Cache<SmartRecords> = crate::cache::Cache::new();
+static FILE_WORKER: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1);
+
+fn unavailable_inventory(reason: &str) -> StorageSnapshot {
+    StorageSnapshot {
+        version: "0.4.0",
+        mode: "read-only",
+        collected_at_ms: 0,
+        disks: vec![],
+        mounts: vec![],
+        warnings: vec![reason.into()],
+        complete: false,
+    }
+}
+
+async fn collect_files(
+    collect: impl FnOnce() -> StorageSnapshot + Send + 'static,
+    budget: Duration,
+) -> StorageSnapshot {
+    let Ok(permit) = FILE_WORKER.try_acquire() else {
+        return unavailable_inventory(
+            "Previous filesystem inspection is still blocked; no additional worker was started",
+        );
+    };
+    let job = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        collect()
+    });
+    match timeout(budget, job).await {
+        Ok(Ok(data)) => data,
+        _ => {
+            unavailable_inventory("Filesystem inventory timed out or failed; result is incomplete")
+        }
+    }
+}
+
+async fn collect_base() -> StorageSnapshot {
+    let mut data = collect_files(inventory_files, Duration::from_secs(2)).await;
+    if data.disks.is_empty() {
+        return data;
+    }
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(4);
+    let mut budget_exhausted = false;
+    'disks: for disk in &mut data.disks {
+        match tokio::time::timeout_at(deadline, probe_blkid(&disk.name)).await {
+            Ok(sig) => disk.signature = sig,
+            Err(_) => {
+                data.complete = false;
+                budget_exhausted = true;
+                break 'disks;
+            }
+        }
+        for part in &mut disk.partitions {
+            match tokio::time::timeout_at(deadline, probe_blkid(&part.name)).await {
+                Ok(sig) => {
+                    part.signature_status = sig.status;
+                    if part.filesystem.is_none() {
+                        part.filesystem = sig.filesystem;
+                    }
+                    part.uuid = sig.uuid;
+                    part.label = sig.label;
+                }
+                Err(_) => {
+                    data.complete = false;
+                    budget_exhausted = true;
+                    break 'disks;
+                }
+            }
+        }
+    }
+    if budget_exhausted {
+        data.warnings
+            .push("Global signature-probe budget exhausted; inventory is incomplete".into());
+    }
+    summarize_signatures(&mut data);
+    data
+}
+
+fn summarize_signatures(data: &mut StorageSnapshot) {
+    let unknown = |status: &str| !["detected", "none"].contains(&status);
+    if data.disks.iter().any(|d| {
+        unknown(&d.signature.status) || d.partitions.iter().any(|p| unknown(&p.signature_status))
+    }) {
+        data.complete = false;
+        data.warnings.push("Disk or partition signatures unavailable, ambiguous or unprobed; inventory never authorizes erasure".into());
+    }
+}
+
+/// Shared topology/signature cache, including disk-level signatures. Never probes SMART.
+pub async fn snapshot_without_smart() -> StorageSnapshot {
+    BASE_CACHE.get(Duration::from_secs(5), collect_base).await
+}
+pub async fn snapshot() -> StorageSnapshot {
+    let mut data = snapshot_without_smart().await;
+    let records = SMART_CACHE
+        .get(Duration::from_secs(30), || async {
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(4);
+            let mut records = Vec::new();
+            for disk in &data.disks {
+                match tokio::time::timeout_at(deadline, probe_smart(&disk.name)).await {
+                    Ok(smart) => records.push((
+                        disk.name.clone(),
+                        disk.size_bytes,
+                        disk.model.clone(),
+                        smart,
+                    )),
+                    Err(_) => break,
+                }
+            }
+            records
+        })
+        .await;
+    for disk in &mut data.disks {
+        disk.smart = records
+            .iter()
+            .find(|(name, size, model, _)| {
+                name == &disk.name && *size == disk.size_bytes && model == &disk.model
+            })
+            .map(|(_, _, _, smart)| smart.clone())
+            .unwrap_or_else(|| {
+                SmartInfo::unavailable("SMART collection budget exhausted or device changed")
+            });
+    }
+    data.warnings.push(
+        "Topology/signatures cached for 5s; SMART cached for 30s and bounded to 4s collection time"
+            .into(),
+    );
+    data
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn timed_out_filesystem_worker_is_not_duplicated_and_can_recover() {
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+        let count = Arc::new(AtomicUsize::new(0));
+        let worker_count = count.clone();
+        let (release, waiting) = std::sync::mpsc::channel::<()>();
+        let (finished, done) = tokio::sync::oneshot::channel();
+        let result = collect_files(
+            move || {
+                worker_count.fetch_add(1, Ordering::SeqCst);
+                let _ = waiting.recv();
+                let _ = finished.send(());
+                unavailable_inventory("fixture")
+            },
+            Duration::from_millis(5),
+        )
+        .await;
+        assert!(!result.complete);
+        let second_count = count.clone();
+        let second = collect_files(
+            move || {
+                second_count.fetch_add(1, Ordering::SeqCst);
+                unavailable_inventory("unexpected duplicate")
+            },
+            Duration::from_millis(5),
+        )
+        .await;
+        assert!(second.warnings[0].contains("Previous filesystem inspection"));
+        assert!(count.load(Ordering::SeqCst) <= 1);
+        release.send(()).unwrap();
+        timeout(Duration::from_secs(2), done)
+            .await
+            .unwrap()
+            .unwrap();
+        let permit = timeout(Duration::from_secs(2), FILE_WORKER.acquire())
+            .await
+            .unwrap()
+            .unwrap();
+        drop(permit);
+        let third = collect_files(
+            || unavailable_inventory("recovered collector"),
+            Duration::from_secs(1),
+        )
+        .await;
+        assert_eq!(third.warnings, ["recovered collector"]);
+    }
     #[test]
     fn test_valid_disk_names() {
         assert!(disk_name_is_safe("nvme0n1"));
@@ -425,6 +664,94 @@ mod tests {
         assert_eq!(found[0].major_minor, "8:1");
         assert_eq!(found[0].mountpoint, "/mnt/My Files");
         assert_eq!(found[0].filesystem, "ext4");
+    }
+    #[test]
+    fn mount_aliases_are_inventoried_by_device_number() {
+        let found = parse_mountinfo("35 24 8:1 / /mnt/alias rw - ext4 UUID=example rw\n");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].major_minor, "8:1");
+    }
+    #[test]
+    fn signature_output_requires_successful_status() {
+        assert_eq!(parse_blkid(Some(8), b"TYPE=ext4", b"").status, "ambiguous");
+        assert!(parse_blkid(Some(1), b"TYPE=ext4", b"").filesystem.is_none());
+        assert_eq!(parse_blkid(Some(2), b"", b"").status, "none");
+        assert_eq!(
+            parse_blkid(Some(2), b"", b"Permission denied").status,
+            "unavailable"
+        );
+        assert_eq!(
+            parse_blkid(Some(0), b"TYPE=ext4\nLABEL=x\n", b"")
+                .filesystem
+                .as_deref(),
+            Some("ext4")
+        );
+    }
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn real_regular_fixture_read_error_is_not_an_empty_signature() {
+        use std::os::unix::fs::PermissionsExt;
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "zion-blkid-fixture-{}-{unique}",
+            std::process::id()
+        ));
+        fs::write(&path, [0u8; 4096]).unwrap();
+        assert_eq!(probe_blkid_path(&path).await.status, "none");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).unwrap();
+        if unsafe { libc::geteuid() } != 0 {
+            assert_eq!(probe_blkid_path(&path).await.status, "unavailable");
+        }
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::remove_file(&path).unwrap();
+        assert_eq!(probe_blkid_path(&path).await.status, "unavailable");
+    }
+    #[test]
+    fn failed_partition_probe_marks_otherwise_successful_inventory_incomplete() {
+        let part = Partition {
+            name: "vda1".into(),
+            size_bytes: 1024,
+            start_bytes: 512,
+            major_minor: "254:1".into(),
+            filesystem: None,
+            uuid: None,
+            label: None,
+            mounts: vec![],
+            signature_status: "none".into(),
+        };
+        let mut original = unavailable_inventory("fixture");
+        original.warnings.clear();
+        original.complete = true;
+        original.disks.push(DiskDetail {
+            name: "vda".into(),
+            model: "fixture".into(),
+            size_bytes: 4096,
+            rotational: false,
+            removable: false,
+            read_only: false,
+            transport: "VirtIO".into(),
+            logical_sector_bytes: Some(512),
+            physical_sector_bytes: Some(512),
+            partitions: vec![part],
+            smart: SmartInfo::unavailable("fixture"),
+            signature: parse_blkid(Some(0), b"PTTYPE=gpt", b""),
+        });
+        let mut good = original.clone();
+        summarize_signatures(&mut good);
+        assert!(good.complete);
+        for status in ["unavailable", "ambiguous", "timeout", "not-probed"] {
+            let mut data = original.clone();
+            data.disks[0].partitions[0].signature_status = status.into();
+            summarize_signatures(&mut data);
+            assert!(!data.complete);
+            assert!(data
+                .warnings
+                .iter()
+                .any(|s| s.contains("partition signatures")));
+        }
     }
     #[test]
     fn test_smart_json() {

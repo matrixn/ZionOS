@@ -5,12 +5,17 @@
 *.initd text eol=lf
 platform/alpine/zion-lab-* text eol=lf
 platform/alpine/zion-init-wrapper text eol=lf
+platform/alpine/zion-launch-contract text eol=lf
 *.rs text eol=lf
 *.toml text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
 *.js text eol=lf
+*.cjs text eol=lf
+*.py text eol=lf
+Cargo.lock text eol=lf
+Dockerfile* text eol=lf
 *.html text eol=lf
 *.css text eol=lf
 *.md text eol=lf

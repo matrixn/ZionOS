@@ -1,0 +1,23 @@
+#!/bin/sh
+# Called by root OpenRC before dropping the API to nobody. Values are not secrets.
+set -eu
+directory=/run/zionos
+mkdir -p "$directory"
+chown root:root "$directory"
+chmod 755 "$directory"
+rm -f "$directory/network-contract" "$directory/lab-serial"
+[ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || :)" = QEMU ] || exit 0
+modprobe -q qemu_fw_cfg 2>/dev/null || :
+base=/sys/firmware/qemu_fw_cfg/by_name/opt/zionos
+network="$(tr -d '\000' 2>/dev/null < "$base/network/raw" || :)"
+[ "$network" = QEMU-USERNET-LOCALHOST-V1 ] || exit 0
+umask 077
+printf '%s\n' "$network" > "$directory/network-contract"
+chmod 444 "$directory/network-contract"
+serial="$(tr -d '\000' 2>/dev/null < "$base/lab/raw" || :)"
+case "$serial" in zl-????????????????)
+    suffix=${serial#zl-}
+    case "$suffix" in *[!0-9a-fA-F]*) exit 0;; esac
+    printf '%s\n' "$serial" > "$directory/lab-serial"
+    chmod 444 "$directory/lab-serial"
+esac

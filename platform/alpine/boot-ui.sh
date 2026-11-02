@@ -26,7 +26,7 @@ zion_boot_frame() {
         3) zion_glow=$zion_white zion_spinner='|' ;;
     esac
     printf '\033[H'
-    zion_ui_line "${zion_dim}GENESIS 0.6  /  ALPINE 3.23  /  LEGACY x86-64${zion_reset}"
+    zion_ui_line "${zion_dim}GENESIS 0.6.1  /  ALPINE 3.23  /  LEGACY x86-64${zion_reset}"
     zion_ui_line "${zion_glow}--------------------------------------------------------------------${zion_reset}"
     zion_ui_line ''
     zion_ui_line "${zion_glow} ZZZZZZZZ  IIII   OOOOO   NN    NN    OOOOO    SSSSSS${zion_reset}"

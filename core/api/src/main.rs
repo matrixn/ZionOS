@@ -1,3 +1,6 @@
+mod access;
+mod cache;
+mod lab;
 mod pools;
 mod provisioning;
 mod storage;
@@ -12,7 +15,7 @@ use serde::Serialize;
 use std::{fs, net::SocketAddr, path::Path, time::Duration};
 use tokio::net::TcpListener;
 
-const VERSION: &str = "0.6.0";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Serialize)]
 struct Disk {
@@ -221,7 +224,7 @@ async fn pools_info() -> Json<pools::PoolSnapshot> {
 }
 
 async fn provisioning_info() -> Json<provisioning::LabSnapshot> {
-    Json(provisioning::snapshot())
+    Json(provisioning::snapshot_cached().await)
 }
 
 async fn index() -> Response {
@@ -232,32 +235,140 @@ async fn app_js() -> Response {
     serve_asset("app.js", "application/javascript; charset=utf-8")
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let port: u16 = std::env::var("ZION_PORT")
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(8080);
-    let address = SocketAddr::from(([0, 0, 0, 0], port));
-
-    let router = Router::new()
+fn router(policy: access::Policy) -> Router {
+    Router::new()
         .route("/", get(index))
         .route("/app.js", get(app_js))
         .route("/api/health", get(health))
         .route("/api/metrics", get(metrics))
         .route("/api/storage", get(storage_info))
         .route("/api/pools", get(pools_info))
-        .route("/api/provisioning", get(provisioning_info));
+        .route("/api/provisioning", get(provisioning_info))
+        .layer(axum::middleware::from_fn_with_state(policy, access::gate))
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(mode) = std::env::args().nth(1) {
+        if ["--lab-plan", "--lab-check"].contains(&mode.as_str()) {
+            std::process::exit(lab::console(&mode).await);
+        }
+        eprintln!("Unknown mode; use --lab-plan or --lab-check, or no arguments for the API");
+        std::process::exit(2);
+    }
+    let port: u16 = std::env::var("ZION_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(8080);
+    let policy = access::Policy::runtime(port);
+    let address = SocketAddr::from((policy.bind_ip(), port));
+
+    let router = router(policy);
 
     let listener = TcpListener::bind(address).await?;
     println!("ZionOS Core {VERSION} listening on http://{address} (read-only, NO authentication)");
-    axum::serve(listener, router).await?;
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{body::Body, extract::ConnectInfo, http::Request};
+    use tower::ServiceExt;
+
+    fn request(
+        path: &str,
+        method: &str,
+        peer: &str,
+        host: &str,
+        origin: Option<&str>,
+    ) -> Request<Body> {
+        let mut request = Request::builder()
+            .uri(path)
+            .method(method)
+            .header("host", host)
+            .extension(ConnectInfo(peer.parse::<SocketAddr>().unwrap()));
+        if let Some(origin) = origin {
+            request = request.header("origin", origin);
+        }
+        request.body(Body::empty()).unwrap()
+    }
+    #[tokio::test]
+    async fn api_is_local_read_only_and_rejects_rebinding() {
+        let local = router(access::Policy::new(false));
+        let response = local
+            .clone()
+            .oneshot(request(
+                "/api/health",
+                "GET",
+                "127.0.0.1:1234",
+                "localhost:8080",
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(value["version"], VERSION);
+        assert_eq!(value["readonly"], true);
+        for route in ["health", "metrics", "storage", "pools", "provisioning"] {
+            let response = local
+                .clone()
+                .oneshot(request(
+                    &format!("/api/{route}"),
+                    "POST",
+                    "127.0.0.1:1",
+                    "localhost:8080",
+                    None,
+                ))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+        }
+        for (peer, host, origin) in [
+            ("192.168.1.2:1", "localhost:8080", None),
+            ("10.0.2.2:1", "localhost:8080", None),
+            ("127.0.0.1:1", "attacker.example:8080", None),
+            (
+                "127.0.0.1:1",
+                "localhost:8080",
+                Some("http://attacker.example:8080"),
+            ),
+            ("127.0.0.1:1", "localhost:8080", Some("null")),
+        ] {
+            assert_eq!(
+                local
+                    .clone()
+                    .oneshot(request("/api/health", "GET", peer, host, origin))
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::FORBIDDEN
+            );
+        }
+        let qemu = router(access::Policy::new(true));
+        assert_eq!(
+            qemu.oneshot(request(
+                "/api/health",
+                "GET",
+                "10.0.2.2:1",
+                "127.0.0.1:8080",
+                None
+            ))
+            .await
+            .unwrap()
+            .status(),
+            StatusCode::OK
+        );
+    }
 
     #[test]
     fn parses_memory_values() {

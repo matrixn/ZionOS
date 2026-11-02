@@ -10,6 +10,8 @@ import select
 import time
 import re
 import signal
+import importlib.util
+from unittest import mock
 import tarfile
 import tempfile
 import unittest
@@ -17,48 +19,38 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class HeaderSafety(unittest.TestCase):
-    def probe(self, content, *, missing=False, broken_reader=False):
-        source = (ROOT / "platform/alpine/zion-lab-provision").read_text()
-        # Source only the declarations before validate/main; never run --apply.
-        declarations = source.split("\nvalidate() {", 1)[0]
-        self.assertIn("check_blank_header() {", declarations)
+class LabCliSafety(unittest.TestCase):
+    def test_apply_is_denied_before_any_helper(self):
         with tempfile.TemporaryDirectory() as directory:
-            fixture = Path(directory) / "header"
-            if not missing:
-                fixture.write_bytes(content)
-            environment = os.environ.copy()
-            if broken_reader:
-                reader = Path(directory) / "dd"
-                # Even a failed reader that produced a full zero buffer must fail.
-                reader.write_text('#!/bin/sh\n/bin/dd "$@"\nexit 1\n')
-                reader.chmod(0o755)
-                environment["PATH"] = directory + os.pathsep + environment["PATH"]
-            return subprocess.run(
-                ["sh", "-c", declarations + '\nTARGET="$1"\ncheck_blank_header',
-                 "header-test", str(fixture)],
-                env=environment, capture_output=True, text=True, check=False,
-            )
+            directory = Path(directory)
+            helper = directory / "core"
+            helper.write_text('#!/bin/sh\necho called > "' + str(directory / "called") + '"\n')
+            helper.chmod(0o755)
+            source = (ROOT / "platform/alpine/zion-lab-provision").read_text().replace(
+                "/opt/zionos/bin/zion-core", str(helper))
+            result = subprocess.run(["sh", "-c", source, "cli-test", "--apply"],
+                                    capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("disabled", result.stderr)
+            self.assertFalse((directory / "called").exists())
+            self.assertNotIn("mkfs", source)
 
-    def test_complete_zero_header_is_accepted(self):
-        self.assertEqual(self.probe(bytes(4096)).returncode, 0)
-
-    def test_short_and_empty_headers_are_denied(self):
-        for length in (0, 1, 4095):
-            with self.subTest(length=length):
-                self.assertNotEqual(self.probe(bytes(length)).returncode, 0)
-
-    def test_nonzero_bytes_anywhere_in_header_are_denied(self):
-        for offset in (0, 2048, 4095):
-            with self.subTest(offset=offset):
-                content = bytearray(4096)
-                content[offset] = 1
-                self.assertNotEqual(self.probe(content).returncode, 0)
-
-    def test_read_error_is_denied(self):
-        self.assertNotEqual(self.probe(b"", missing=True).returncode, 0)
-        self.assertNotEqual(self.probe(bytes(4096), broken_reader=True).returncode, 0)
-
+    def test_plan_validate_and_recovery_use_shared_read_only_core(self):
+        with tempfile.TemporaryDirectory() as directory:
+            helper = Path(directory) / "core"
+            helper.write_text('#!/bin/sh\nprintf "%s\\n" "$1"\n')
+            helper.chmod(0o755)
+            for script, argument, expected in [
+                ("zion-lab-provision", "--plan", "--lab-plan"),
+                ("zion-lab-provision", "--validate", "--lab-plan"),
+                ("zion-lab-recover", "--check", "--lab-check"),
+            ]:
+                source = (ROOT / "platform/alpine" / script).read_text().replace(
+                    "/opt/zionos/bin/zion-core", str(helper))
+                result = subprocess.run(["sh", "-c", source, "cli-test", argument],
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout.strip(), expected)
 
 class OverlaySafety(unittest.TestCase):
     def test_archive_boot_chain_and_assets(self):
@@ -144,6 +136,7 @@ class InitramfsSafety(unittest.TestCase):
 class VmSmokeSafety(unittest.TestCase):
     def test_occupied_port_is_rejected_before_launch(self):
         with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 listener.bind(("127.0.0.1", 8080))
                 listener.listen()
@@ -281,6 +274,115 @@ class BootLoaderSafety(unittest.TestCase):
         plain = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", result.stdout)
         self.assertLessEqual(len(plain.splitlines()), 24)
         self.assertTrue(all(len(line) <= 80 for line in plain.splitlines()))
+
+
+class HostImageSafety(unittest.TestCase):
+    @staticmethod
+    def checker():
+        spec=importlib.util.spec_from_file_location("qcow_check",ROOT / "scripts/check-qcow2.py")
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_backing_and_external_data_headers_are_denied_before_qemu_img(self):
+        module=self.checker()
+        good=bytearray(104)
+        good[:4]=b"QFI\xfb"
+        struct.pack_into(">I",good,4,3)
+        module.check_header(good)
+        cases=[]
+        backing=bytearray(good); struct.pack_into(">Q",backing,8,104); cases.append(backing)
+        external=bytearray(good); struct.pack_into(">Q",external,72,4); cases.append(external)
+        dirty=bytearray(good); struct.pack_into(">Q",dirty,72,1); cases.append(dirty)
+        cases.extend([b"", b"QFI\xfb", b"not qcow"])
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"disk.qcow2"
+            for data in cases:
+                path.write_bytes(data)
+                with mock.patch.object(module.subprocess,"check_output",side_effect=AssertionError("must refuse before QEMU opens backing files")):
+                    with self.assertRaises(ValueError): module.check(path)
+            path.write_bytes(good)
+            with mock.patch.object(module.subprocess,"check_output",return_value='{"format":"qcow2","virtual-size":1073741824}'):
+                module.check(path)
+            link=Path(directory)/"link.qcow2"; link.symlink_to(path)
+            with self.assertRaises(ValueError): module.check(link)
+
+    def test_launcher_rejects_drive_network_and_firmware_overrides(self):
+        for arguments in (["-drive","file=/dev/sda"],["-nic","bridge"],["-fw_cfg","name=opt/zionos/network,string=bad"]):
+            result=subprocess.run(["bash",str(ROOT/"scripts/run-qemu.sh"),*arguments],capture_output=True,text=True,timeout=5)
+            self.assertEqual(result.returncode,2)
+            self.assertIn("forbidden",result.stderr)
+
+
+class BuildCacheSafety(unittest.TestCase):
+    def test_iso_publication_preserves_open_image_and_failed_build(self):
+        spec=importlib.util.spec_from_file_location("publish_iso",ROOT/"scripts/publish-iso.py")
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); destination=root/"live.iso"; source=root/"new.iso"
+            destination.write_bytes(b"old image"); source.write_bytes(b"new image")
+            with destination.open("rb") as running_vm:
+                module.publish(source,destination)
+                self.assertEqual(running_vm.read(),b"old image")
+                self.assertEqual(destination.read_bytes(),b"new image")
+            with self.assertRaises(OSError): module.publish(root/"missing",destination)
+            self.assertEqual(destination.read_bytes(),b"new image")
+            self.assertEqual(list(root.glob(".iso-*")),[])
+
+    def test_source_and_signing_changes_invalidate_correct_layers(self):
+        spec=importlib.util.spec_from_file_location("build_inputs",ROOT/"scripts/build-inputs.py")
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            files=["platform/alpine/Dockerfile.builder","platform/alpine/mkimg.zionos.sh",
+                   "platform/alpine/initramfs-banner.sh","platform/alpine/boot-ui.sh",
+                   "scripts/brand-initramfs.sh","scripts/build-inputs.py",
+                   "build/stage/zion-core","build/stage/app.js"]
+            for name in files:
+                path=root/name; path.parent.mkdir(parents=True,exist_ok=True); path.write_text("initial")
+            keys=root/"keys"; keys.mkdir(); public=keys/"builder.rsa.pub"; public.write_text("public fixture")
+            initial_kernel=module.kernel(root,keys,"builder-one")
+            initial_overlay=module.overlay(root)
+            os.utime(root/"build/stage/zion-core",None)
+            self.assertEqual(initial_overlay,module.overlay(root))
+            (root/"build/stage/zion-core").write_text("changed binary")
+            self.assertNotEqual(initial_overlay,module.overlay(root))
+            self.assertEqual(initial_kernel,module.kernel(root,keys,"builder-one"))
+            (root/"platform/alpine/boot-ui.sh").write_text("changed initramfs")
+            self.assertNotEqual(initial_kernel,module.kernel(root,keys,"builder-one"))
+            key_before=module.kernel(root,keys,"builder-one"); public.write_text("rotated public fixture")
+            self.assertNotEqual(key_before,module.kernel(root,keys,"builder-one"))
+            (root/"platform/alpine/boot-ui.sh").unlink()
+            with self.assertRaises(OSError): module.kernel(root,keys,"builder-one")
+
+
+class LaunchContractSafety(unittest.TestCase):
+    def test_only_exact_network_contract_and_valid_serial_are_published(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory=Path(directory)
+            bin_dir=directory/"bin"; bin_dir.mkdir()
+            for tool in ["modprobe","chown"]:
+                stub=bin_dir/tool; stub.write_text("#!/bin/sh\nexit 0\n"); stub.chmod(0o755)
+            vendor=directory/"vendor"; vendor.write_text("QEMU\n")
+            fw=directory/"fw"; (fw/"network").mkdir(parents=True); (fw/"lab").mkdir()
+            runtime=directory/"runtime"
+            script=(ROOT/"platform/alpine/zion-launch-contract").read_text()
+            script=script.replace("/run/zionos",str(runtime)).replace("/sys/class/dmi/id/sys_vendor",str(vendor))
+            script=script.replace("/sys/firmware/qemu_fw_cfg/by_name/opt/zionos",str(fw))
+            environment={**os.environ,"PATH":str(bin_dir)+os.pathsep+os.environ["PATH"]}
+            (fw/"network/raw").write_bytes(b"QEMU-USERNET-LOCALHOST-V1\0")
+            (fw/"lab/raw").write_text("zl-0123456789abcdef")
+            subprocess.run(["sh","-c",script],env=environment,check=True,capture_output=True)
+            self.assertEqual((runtime/"lab-serial").read_text().strip(),"zl-0123456789abcdef")
+            self.assertEqual((runtime/"network-contract").stat().st_mode&0o777,0o444)
+            (fw/"network/raw").write_text("BRIDGED")
+            subprocess.run(["sh","-c",script],env=environment,check=True,capture_output=True)
+            self.assertFalse((runtime/"network-contract").exists())
+            self.assertFalse((runtime/"lab-serial").exists())
+            (fw/"network/raw").write_text("QEMU-USERNET-LOCALHOST-V1")
+            (fw/"lab/raw").write_text("zl-not-valid")
+            subprocess.run(["sh","-c",script],env=environment,check=True,capture_output=True)
+            self.assertFalse((runtime/"lab-serial").exists())
 
 
 if __name__ == "__main__":

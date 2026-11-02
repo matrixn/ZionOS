@@ -307,6 +307,7 @@ mod tests {
             transport: "VirtIO".into(),
             logical_sector_bytes: Some(512),
             physical_sector_bytes: Some(512),
+            signature: crate::storage::SignatureInfo::unavailable("not-probed"),
             partitions,
             smart: SmartInfo {
                 status: "unavailable".into(),
@@ -327,6 +328,7 @@ mod tests {
             uuid: None,
             label: None,
             mounts: if mount { vec!["/data".into()] } else { vec![] },
+            signature_status: "not-probed".into(),
         };
         StorageSnapshot {
             version: "0.4.0",
@@ -347,6 +349,7 @@ mod tests {
                 vec![]
             },
             warnings: vec![],
+            complete: true,
         }
     }
     #[test]

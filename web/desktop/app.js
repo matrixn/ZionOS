@@ -391,8 +391,12 @@ updateClock();
 setInterval(updateClock, 30_000);
 openApp('overview');
 pollMetrics();
-setInterval(pollMetrics, 5000);
-setInterval(() => { if (windows.has('storage')) { pollStorage(); pollPools(); pollLab(); } }, 75000);
+setInterval(() => { if (document.visibilityState !== 'hidden') pollMetrics(); }, 5000);
+setInterval(() => {
+  if (document.visibilityState !== 'hidden' && windows.has('storage') && !windows.get('storage').classList.contains('minimized')) {
+    pollStorage(); pollPools(); pollLab();
+  }
+}, 75000);
 
 
 // Storage 0.4 intentionally uses DOM/textContent for all data returned by /api/storage.
@@ -522,6 +526,7 @@ async function pollStorage() {
     storageError = null;
   } catch (error) {
     storageError = `Storage Manager nu este disponibil: ${error.message}`;
+    currentStorage = null;
     if (win) toast(storageError);
   } finally {
     storageLoading = false;
@@ -534,6 +539,17 @@ async function pollStorage() {
 // Genesis 0.5: observational topology and a browser-only capacity calculator.
 // No privileged write endpoint exists; the UI never submits disk operations.
 function poolElem(tag, cls, text) { return storageElement(tag, cls, text); }
+function capacityPreview(layout, disks) {
+  const minimum = {single:1, mirror:2, raid5:3}[layout];
+  if (!minimum || (layout === 'single' ? disks.length !== 1 : disks.length < minimum))
+    return {valid:false, message: layout === 'single' ? 'Single necesită exact un disc.' : `Selectează cel puțin ${minimum || 1} discuri.`};
+  if (new Set(disks.map(d => d.name)).size !== disks.length || disks.some(d => !Number.isSafeInteger(d.size_bytes) || d.size_bytes <= 0))
+    return {valid:false, message:'Identificatori dubli sau capacități invalide.'};
+  const smallest = Math.min(...disks.map(d => d.size_bytes));
+  const estimated = smallest * (layout === 'raid5' ? disks.length - 1 : 1);
+  if (!Number.isSafeInteger(estimated)) return {valid:false, message:'Capacitate în afara preciziei simulatorului.'};
+  return {valid:true, estimated};
+}
 function renderPoolWindow(win) {
   if (!win) return;
   const list = win.querySelector('[data-pool-list]');
@@ -606,18 +622,15 @@ function renderPoolWindow(win) {
     row.append(input,desc);disksNode.append(row);
   }
   const selected = candidates.filter(d=>plannerSelected.has(d.name));
-  const countRequired = plannerLayout === 'single' ? 1 : plannerLayout === 'mirror' ? 2 : 3;
-  const validLayout = plannerLayout === 'single' ? selected.length === 1 : selected.length >= countRequired;
+  const preview = capacityPreview(plannerLayout, selected);
   latestPlanSummary = '';
   result.replaceChildren();
-  if (!validLayout) {
-    result.append(poolElem('div','',plannerLayout==='single' ? 'Single necesită exact un disc.' : `Selectează cel puțin ${countRequired} discuri.`));
+  if (!preview.valid) {
+    result.append(poolElem('div','',preview.message));
     if (copy) copy.disabled=true;
     return;
   }
-  const sizes = selected.map(d=>Number(d.size_bytes) || 0);
-  const min = Math.min(...sizes);
-  const estimated = plannerLayout === 'single' ? min : plannerLayout === 'mirror' ? min : min * (sizes.length - 1);
+  const estimated = preview.estimated;
   const redundancy = plannerLayout === 'single' ? 'Fără redundanță' : plannerLayout === 'mirror' ? 'Copii complete; toleranța la defect depinde de implementare' : 'Paritate simplă; poate tolera pierderea unui disc';
   latestPlanSummary = `ZionOS Genesis 0.5 — SIMULARE FĂRĂ EXECUȚIE\nLayout: ${plannerLayout}\nDiscuri: ${selected.map(d=>d.name).join(', ')}\nCapacitate teoretică: ${bytes(estimated)}\n${redundancy}\nNu se creează/șterge/formatează nimic. Datele existente nu sunt verificate.`;
   result.append(poolElem('strong','',bytes(estimated)),poolElem('div','',`Capacitate utilă teoretică · ${redundancy}`),poolElem('div','storage-footnote','Nu include metadata, filesystem, rezervă, aliniere sau riscurile configurării.'));
@@ -645,38 +658,50 @@ async function pollPools() {
 }
 
 
-// Genesis 0.6: purely observational lab diagnostics. There are NO write calls from web.
+// Genesis 0.6.1: purely observational lab diagnostics. There are NO write calls from web.
 let currentLab = null;
+let labLoading = false;
+let labError = null;
 const labCommandText = 'zion-lab-provision --plan\nzion-lab-recover --check';
 async function pollLab() {
+  if (labLoading) return;
+  labLoading = true;
   try {
     const response = await fetch('/api/provisioning', {cache:'no-store',signal:AbortSignal.timeout(10000)});
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json();
-    if (data.mode !== 'read-only' || !Array.isArray(data.reasons) || !data.recovery || data.recovery.automatic_repairs !== false)
+    if (data.mode !== 'read-only' || data.execution_enabled !== false || !Array.isArray(data.reasons) || !data.recovery || data.recovery.automatic_repairs !== false)
       throw new Error('Schema provisioning invalidă');
     currentLab = data;
-    renderLabWindow(windows.get('storage'));
+    labError = null;
   } catch(error) {
     currentLab = null;
-    const node = windows.get('storage')?.querySelector('[data-lab-reasons]');
-    if (node) node.replaceChildren(storageElement('div','storage-empty',`Provisioning indisponibil: ${error.message}`));
+    labError = `Provisioning indisponibil: ${error.message}`;
+  } finally {
+    labLoading = false;
+    renderLabWindow(windows.get('storage'));
   }
 }
 function renderLabWindow(win) {
-  if (!win || !currentLab) return;
+  if (!win) return;
   const totals = win.querySelector('[data-lab-totals]');
   const reasons = win.querySelector('[data-lab-reasons]');
   const commands = win.querySelector('[data-lab-commands]');
   const recovery = win.querySelector('[data-lab-recovery]');
   if (!totals || !reasons || !commands || !recovery) return;
+  if (!currentLab) {
+    for (const node of [totals, reasons, recovery])
+      node.replaceChildren(storageElement('div','storage-empty',labError || 'Se verifică laboratorul…'));
+    commands.textContent = 'Niciun plan curent disponibil. Nu folosi rezultate anterioare pentru operații pe disc.';
+    return;
+  }
   totals.replaceChildren();
   storageStat(totals, 'Mediu', currentLab.qemu_detected ? 'QEMU' : 'Alt hardware', 'Operațiile lab sunt restricționate la QEMU');
   storageStat(totals, 'Discul vdb', currentLab.target_exists ? 'Detectat' : 'Absent', currentLab.target_capacity_bytes ? bytes(currentLab.target_capacity_bytes) : 'Disc separat lipsă');
-  storageStat(totals, 'Preflight', currentLab.eligible_for_lab ? 'Parțial OK' : 'Blocat', 'CLI verifică suplimentar signatures și mount-uri');
+  storageStat(totals, 'Preflight', currentLab.inspection_ready ? 'Inspecție parțială' : 'Blocat', 'Execuția de formatare este blocată în 0.6.1');
   reasons.replaceChildren();
   for (const message of currentLab.reasons) reasons.append(storageElement('div','storage-footnote',message));
-  commands.textContent = 'WSL: bash scripts/run-qemu-lab.sh\nConsola QEMU: zion-lab-provision --plan\nConsola QEMU: zion-lab-recover --check\n\nDoar pentru un disc QCOW2 nou și separat. Formatarea necesită comanda manuală --apply și o confirmare în consola QEMU.';
+  commands.textContent = 'WSL: bash scripts/run-qemu-lab.sh\nConsola QEMU: zion-lab-provision --plan\nConsola QEMU: zion-lab-recover --check\n\nQCOW2 nou, identitate de sesiune verificată. --apply este dezactivat în 0.6.1 până la un executor exclusiv verificat.';
   recovery.replaceChildren();
   recovery.append(storageElement('h4','', 'Recovery diagnostics (fără modificări)'));
   for (const step of currentLab.recovery.steps || []) recovery.append(storageElement('p','',`• ${step}`));

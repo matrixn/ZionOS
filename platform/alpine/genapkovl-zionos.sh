@@ -24,18 +24,20 @@ APK
 # Keep Alpine package identity in /etc/os-release for compatibility.
 # User-facing login branding is independent of the underlying package manager.
 cat > "$tmp/etc/zionos-release" <<'RELEASE'
-ZionOS Genesis 0.6 (AL 3.23; Linux LTS)
+ZionOS Genesis 0.6.1 (AL 3.23; Linux LTS)
 RELEASE
-printf 'ZionOS lab preview; never use on valuable physical disks.\n' > "$tmp/etc/zionos-lab"
-printf 'Zion OS Genesis 0.6 (AL 3.23)\n\n' > "$tmp/etc/issue"
-printf '\033[1;36mZION OS\033[0m  \033[1mGenesis 0.6\033[0m (AL 3.23 / Linux LTS)\n' > "$tmp/etc/motd"
+printf 'ZIONOS-LAB-0.6.1\n' > "$tmp/etc/zionos-lab"
+printf 'Zion OS Genesis 0.6.1 (AL 3.23)\n\n' > "$tmp/etc/issue"
+printf '\033[1;36mZION OS\033[0m  \033[1mGenesis 0.6.1\033[0m (AL 3.23 / Linux LTS)\n' > "$tmp/etc/motd"
 cat >> "$tmp/etc/motd" <<'MOTD'
 NAS Development Edition — Provisioning & Recovery Lab
 Web: http://<NAS-IP>:8080  |  Backend: Alpine Linux 3.23
-Storage: read-only HTTP API. Destructive CLI restricted to disposable QEMU vdb.
+Storage: read-only HTTP API. Formatting disabled in Genesis 0.6.1; disposable QEMU lab only.
 MOTD
 cp /workspace/platform/alpine/zion-lab-provision "$tmp/usr/local/sbin/zion-lab-provision"
 cp /workspace/platform/alpine/zion-lab-recover "$tmp/usr/local/sbin/zion-lab-recover"
+cp /workspace/platform/alpine/zion-launch-contract "$tmp/usr/local/sbin/zion-launch-contract"
+chmod 755 "$tmp/usr/local/sbin/zion-launch-contract"
 chmod 755 "$tmp/usr/local/sbin/zion-lab-provision" "$tmp/usr/local/sbin/zion-lab-recover"
 cp /workspace/platform/alpine/zion-boot-intro.initd "$tmp/etc/init.d/zion-boot-intro"
 cp /workspace/platform/alpine/zion-network-info.initd "$tmp/etc/init.d/zion-network-info"
