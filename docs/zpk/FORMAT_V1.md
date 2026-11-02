@@ -29,7 +29,8 @@ Metadata files are reserved and not listed in `files`. Each `files` declaration 
 exist in the archive. Extra files and duplicate archive paths are rejected.
 
 Paths are relative, case-sensitive ASCII, at most 240 bytes, components at most 100
-bytes from `[A-Za-z0-9._-]`, separated by one `/`. No empty, `.` or `..` components,
+bytes from `[A-Za-z0-9._+-]`, separated by one `/`. `+` supports native library names
+such as `libstdc++.so.6`. No empty, `.` or `..` components,
 absolute paths, controls, colon, backslash or trailing slash on regular files.
 USTAR prefix/name fields combine into the same canonical path before validation.
 Directory headers may end with one `/`; their normalized names must also be unique.
@@ -79,7 +80,7 @@ Service and single/multiple desktop examples are in
 | `package.version` | Strict SemVer version; prerelease/build metadata supported |
 | `package.categories` | Required nonempty unique category list |
 | `target` | `os="linux"`, `architecture="x86_64"`, `cpu="x86-64-v1"`, `libc="musl"`; anything else explicitly unsupported in this MVP |
-| `build.system` | `rust`, `make`, `cmake`, `meson`, `custom` |
+| `build.system` | `rust`, `go`, `make`, `cmake`, `meson`, `custom`; declaration support does not imply a Forge adapter (Meson remains unsupported) |
 | `build.toolchain`, `reproducible` | Nonempty bounded text describing compiler/target; required boolean declaration, not independent build attestation |
 | `runtime.dependencies` | Required array of `{id, version}`; reverse-domain IDs and SemVer requirements, max 128 unique dependencies, no self dependency. May be empty |
 | `compatibility.min_zionos` | Minimum ZionOS SemVer |

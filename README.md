@@ -156,6 +156,41 @@ cargo run --locked --manifest-path crates/zpk-schema/Cargo.toml --bin zpk-inspec
   build/zpk/hello-1.0.0.zpk 0.6.1
 ```
 
+## ZPK Forge — TASK 01
+
+- [x] CLI `zpk forge init/build/package/inspect/validate/clean` în `crates/zpk-forge`.
+- [x] Build-uri reale Rust/Cargo, C/C++ CMake, Go pur și Make cu staging declarativ.
+- [x] Builder Alpine separat, fără mount-uri host/credențiale/discuri, UID neprivilegiat,
+  rețea oprită, root read-only și limite de resurse; fără fallback la compilare host.
+- [x] `init` citește sursele fără execuție și raportează câmpurile ambigue `UNRESOLVED`.
+- [x] Staging temporar, colectare recursivă de biblioteci musl, verificare ELF/DT_NEEDED
+  și RUNPATH relativ; împachetare offline, hash-uri și provenance.
+- [x] Exemple `zion-hello-rust` și `zion-hello-c`, plus teste reale Go/Make/C++.
+- [x] Rebuild-uri identice byte-for-byte și execuție a exemplelor în Alpine minimal,
+  fără compilatoare sau runtime OCI cerut de aplicație.
+- [x] 16 teste offline Forge și 2 teste Docker; Foundation și Genesis păstrate.
+- [ ] aarch64/i686/ARMv7, CGO, Zig/Meson/Autotools, verificare completă ISA,
+  instalare și integrare în ISO: nesuportate în acest task.
+
+Docker este numai mediul de BUILD/test. Sursele pot executa cod arbitrar în builder;
+izolarea folosește kernelul Docker și nu oferă garanția unei VM dedicate. Flagurile
+x86-64 și proprietățile ELF sunt verificate, dar nu certifică toate instrucțiunile
+executate pe Core 2 Duo. Aceste limite sunt afișate la build/package și în provenance.
+
+```bash
+export CARGO_TARGET_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zionos/zpk-target"
+cargo build --locked --manifest-path crates/zpk-forge/Cargo.toml
+"$CARGO_TARGET_DIR/debug/zpk" forge build --project examples/zion-hello-rust --prepare-builder
+"$CARGO_TARGET_DIR/debug/zpk" forge package --project examples/zion-hello-rust
+"$CARGO_TARGET_DIR/debug/zpk" forge inspect examples/zion-hello-rust/.zpk-forge/org.zionos.zion-hello-rust-1.0.0.zpk
+bash tests/zpk/forge-check.sh --docker
+```
+
+La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
+`forge clean --project ...` pentru a elimina numai rezultatele generate. Nu se
+suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
+· [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
+
 ## Build și teste Genesis: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,

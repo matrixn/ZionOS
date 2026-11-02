@@ -64,6 +64,7 @@ pub struct Build {
 #[serde(rename_all = "kebab-case")]
 pub enum BuildSystem {
     Rust,
+    Go,
     Make,
     Cmake,
     Meson,
@@ -202,7 +203,7 @@ pub fn safe_path(path: &str) -> bool {
                 && part.len() <= 100
                 && part
                     .bytes()
-                    .all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c))
+                    .all(|c| c.is_ascii_alphanumeric() || b"._-+".contains(&c))
         })
 }
 fn unique<T: Ord>(values: impl IntoIterator<Item = T>) -> bool {

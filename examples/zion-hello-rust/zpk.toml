@@ -1,0 +1,50 @@
+schema_version = 1
+permissions = []
+
+[package]
+id = "org.zionos.zion-hello-rust"
+name = "zion-hello-rust"
+version = "1.0.0"
+description = "Minimal native application for trusted local ZPK development."
+author = "ZionOS contributors"
+license = "MIT"
+categories = ["development"]
+
+[target]
+os = "linux"
+architecture = "x86_64"
+cpu = "x86-64-v1"
+libc = "musl"
+
+[build]
+system = "rust"
+toolchain = "Forge trusted Alpine 3.23 builder; x86-64-v1"
+reproducible = false
+
+[runtime]
+dependencies = []
+
+[compatibility]
+min_zionos = "0.6.1"
+upgrades_from = ">=0.1.0, <1.0.0"
+data_schema = 1
+conflicts = []
+replaces = []
+
+[[files]]
+path = "payload/bin/zion-hello-rust"
+kind = "executable"
+linkage = "static"
+permissions = []
+
+[forge]
+version = 1
+system = "rust"
+inputs = ["Cargo.toml", "Cargo.lock", "src", "LICENSE"]
+license_file = "LICENSE"
+jobs = 2
+cargo_bin = "zion-hello-rust"
+
+[[forge.stage]]
+from = "build/forge-app"
+to = "payload/bin/zion-hello-rust"

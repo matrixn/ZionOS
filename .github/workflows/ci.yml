@@ -2,13 +2,23 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  forge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Forge tests, Clippy and isolated builds
+        run: bash tests/zpk/forge-check.sh --docker
   zpk:
     runs-on: ubuntu-latest
     steps:

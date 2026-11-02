@@ -5,6 +5,9 @@ defines declarations and offline inspection only. It does not install applicatio
 start services, grant permissions, modify storage, or extend the HTTP API. No Docker
 images or container runtime are part of ZPK. Genesis remains at 0.6.1.
 
+[ZPK Forge (TASK 01)](FORGE.md) adds isolated source builds and offline native packaging.
+Docker is used only for development builds/tests, not by produced applications at runtime.
+
 **Unsigned ZPK files are limited to trusted local development. SHA-256 detects
 corruption and inventory changes; it does not authenticate publishers. An attacker
 can replace both content and checksums.** Valid inspection is not permission to run
@@ -30,7 +33,7 @@ TASK 00. ZPK has its own committed `Cargo.lock`; core's manifest, lockfile, sour
 staging and ISO inputs are unchanged. Use `--locked` for reproducible dependency
 selection. This does not claim byte-for-byte reproducible compiler output.
 
-The inspector is not staged in the ISO. Its zstd C build needs a C toolchain;
+The inspector and Forge are not staged in the ISO. Their zstd C build needs a C toolchain;
 Rust, Cargo, rustfmt and Clippy are needed for development. PNG validation is bounded
 and runs only on requested inspection. There are no always-on ZPK services.
 

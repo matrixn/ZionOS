@@ -7,6 +7,8 @@ Read the actual source before modifying it. Do not rely solely on patch names, R
 
 ## Repository map
 - `core/api/` — Rust HTTP server, metrics, storage and provisioning API; current web APIs are not authenticated.
+- `crates/zpk-schema/` — native package schema and bounded offline inspection; no extraction/execution.
+- `crates/zpk-forge/` — developer build CLI; third-party compilation only inside its constrained Docker builder, never on the host. No installation or privileged hooks.
 - `web/desktop/` — lightweight operating-system-style browser desktop and assets.
 - `platform/alpine/` — Alpine ISO profile, generated apk overlay, OpenRC startup configuration, lab utilities and branding.
 - `scripts/` — staging, ISO build, QEMU and testing.
@@ -41,6 +43,10 @@ bash scripts/build-core.sh
 Also run `bash -n` for Bash scripts, `sh -n` for portable shell files, and `node --check web/desktop/app.js` when applicable. For storage or boot changes, run `bash tests/check-safety.sh` if present and, in a properly equipped local WSL/Docker/QEMU environment, `bash scripts/build-iso.sh` and `bash scripts/test-vm.sh`.
 
 Do not claim ISO/QEMU tests passed when those tools are unavailable. Do not execute destructive lab commands in CI.
+
+For ZPK changes also run `bash tests/zpk/check.sh` and `bash tests/zpk/forge-check.sh`.
+Use `bash tests/zpk/forge-check.sh --docker` for opt-in isolated native build/runtime tests
+when a local Linux Docker daemon with cgroup v2 is available; never fall back to host compilation.
 
 ## Working process
 - First summarize what the affected code currently does, identify risks, and propose a limited change.

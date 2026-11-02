@@ -222,6 +222,9 @@ fn package_identifiers_and_semver_are_strict() {
 }
 #[test]
 fn path_aliases_and_ancestor_collisions_are_rejected() {
+    assert!(zpk_schema::manifest::safe_path(
+        "payload/lib/libstdc++.so.6"
+    ));
     for path in [
         "/payload/bin/hello",
         "../hello",

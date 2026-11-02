@@ -1,0 +1,12 @@
+[package]
+name = "zion-hello-rust"
+version = "1.0.0"
+edition = "2021"
+authors = ["ZionOS contributors"]
+license = "MIT"
+description = "Native Forge Rust example"
+
+[profile.release]
+opt-level = "s"
+strip = true
+panic = "abort"

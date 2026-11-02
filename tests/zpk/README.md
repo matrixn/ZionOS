@@ -18,3 +18,17 @@ are regenerated only when the test intends to reach a later validation layer. No
 test extracts payloads, executes a package, formats a disk or needs privileges.
 
 Real-ELF authoring/inspection instructions: [hello example](../../examples/zpk-hello/README.md).
+
+## Forge
+
+`forge.rs` is a separate integration target of `crates/zpk-forge`. Run
+`bash tests/zpk/forge-check.sh` for 16 offline tests and strict checks, or
+`bash tests/zpk/forge-check.sh --docker` to prepare the trusted builder and execute
+the two opt-in Docker cases as well. These cases compile only inside the constrained
+builder, run owned hello fixtures in a second unprivileged minimal Alpine environment,
+and compare two complete builds each of Rust/CMake/Go/Make/C++.
+
+Source/manifest/stage errors, missing compilers, failed builds, dependency closure,
+architecture/ISA-note mismatches, bounds, symlink/credential rejection and safe cleanup
+are covered. Offline tests use only generated regular-file fixtures and fixed owned
+process helpers; they never run third-party application build scripts on the host.

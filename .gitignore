@@ -1,4 +1,5 @@
 /build/
+**/.zpk-forge/
 /core/api/target/
 /web/desktop/node_modules/
 
