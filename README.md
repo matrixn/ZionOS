@@ -132,7 +132,31 @@ Detalii, mod verbose, loguri și limite: [Consola de boot](docs/BOOT_CONSOLE.md)
 - [x] KVM automat când poate crea o VM; fallback TCG; parametrii de disc/rețea nu pot fi suprascriși.
 - [ ] Auth/TLS, rate limiting per client, executor de formatare, restaurare și teste fizice.
 
-## Build și teste: Windows + WSL2
+## ZPK — TASK 00, fundație pentru pachete native
+
+- [x] Crate separat `crates/zpk-schema`: schema v1 Serde/TOML, validare manifest și CLI read-only.
+- [x] Arhivă USTAR + zstd cu SHA-256, inventar exact, limite de expansiune și refuz linkuri/căi nesigure.
+- [x] Metadate pentru executabile musl, dependențe, serviciu opțional, zero/una/mai multe intrări desktop,
+  ferestre, iconuri PNG, assets, permisiuni, date/config și compatibilitate de upgrade.
+- [x] Exemple valide, fixture-uri invalide, teste de arhive malițioase și CI separat.
+- [x] Verificate local: 23 teste ZPK, Clippy strict, regresiile Genesis, build ISO și boot QEMU nou.
+- [x] Exemplu nativ hello compilat și împachetat; inspectorul nu execută conținutul.
+- [ ] Instalare, repository, semnături, sandbox și integrare în desktop/ISO: neimplementate.
+
+**Hash-urile nu autentifică editorii. ZPK nesemnat este numai pentru dezvoltare locală de încredere.**
+Genesis 0.6.1 și comenzile sale rămân neschimbate; ZPK nu este inclus în ISO.
+Nu introducem încă workspace Cargo la rădăcină: păstrăm lockfile-ul și build-ul Core,
+iar noul crate are lockfile propriu. Detalii: [documentația ZPK](docs/zpk/README.md),
+[format v1](docs/zpk/FORMAT_V1.md), [verificări](docs/zpk/VERIFICATION.md).
+
+```sh
+bash tests/zpk/check.sh
+bash examples/zpk-hello/build-package.sh
+cargo run --locked --manifest-path crates/zpk-schema/Cargo.toml --bin zpk-inspect -- \
+  build/zpk/hello-1.0.0.zpk 0.6.1
+```
+
+## Build și teste Genesis: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,
 rustfmt/Clippy, target musl, `musl-tools`, Docker, QEMU, `qemu-img`, curl, Python 3 și Node.js.

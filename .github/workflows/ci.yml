@@ -2,13 +2,30 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/zpk-foundation]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  zpk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - name: ZPK formatting, tests and Clippy
+        run: |
+          bash tests/zpk/check.sh
+      - name: Build and inspect a real baseline musl example without executing it
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          bash examples/zpk-hello/build-package.sh
+          cargo run --locked --manifest-path crates/zpk-schema/Cargo.toml --bin zpk-inspect -- build/zpk/hello-1.0.0.zpk 0.6.1
   rust-and-source:
     runs-on: ubuntu-latest
     steps:
