@@ -1,0 +1,23 @@
+name: ZPK native runtime VM integration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - name: VM build tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools qemu-system-x86 xorriso
+      - name: Build existing Genesis ISO (Docker used only for ISO construction)
+        run: bash scripts/build-iso.sh
+      - name: Run native applications in disposable QEMU, never a runtime container
+        run: bash tests/zpk/runtime-check.sh --vm

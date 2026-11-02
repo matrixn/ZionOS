@@ -32,3 +32,17 @@ Source/manifest/stage errors, missing compilers, failed builds, dependency closu
 architecture/ISA-note mismatches, bounds, symlink/credential rejection and safe cleanup
 are covered. Offline tests use only generated regular-file fixtures and fixed owned
 process helpers; they never run third-party application build scripts on the host.
+
+## Native runtime
+
+`runtime.rs` contains 13 tests with mock OpenRC operations and regular-file temporary
+roots. `bash tests/zpk/runtime-check.sh` runs these plus strict formatting/Clippy.
+`bash tests/zpk/runtime-check.sh --vm` compiles the owned native demo and administrator
+harness, creates a read-only fixture CD and boots a disposable QEMU guest. It does
+not create host users, install host services, mount host NAS volumes or attach a
+writable disk. Never run `runtime-guest.sh` directly on the host.
+
+Real VM checks include dedicated non-root identity, capability/descriptor clearing,
+Landlock/seccomp enforcement, memory/FD/process/file/CPU limits, native Unix health,
+logs, clean shutdown, state across restarts, crash respawn/exhaustion, autostart,
+stop with broken current reference, and refusal of persistent-required on live RAM.

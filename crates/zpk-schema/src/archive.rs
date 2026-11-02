@@ -412,12 +412,17 @@ fn read_tar(input: &mut impl Read, limits: Limits) -> Result<Inspection> {
     }
     let manifest = manifest.ok_or_else(|| bad("missing manifest.toml"))?;
     let checksums = checksums.ok_or_else(|| bad("missing checksums.json"))?;
-    if checksums.schema_version != 1 || checksums.algorithm != "sha256" {
-        return Err(bad("unsupported checksum schema/algorithm"));
-    }
     if !files.contains_key("LICENSE") || manifest.files.iter().any(|f| !files.contains_key(&f.path))
     {
         return Err(bad("missing LICENSE or declared package file"));
+    }
+    check_hashes(&checksums, &files)?;
+    Ok(Inspection{manifest,files,authenticated:false,warning:"Unsigned ZPK: hashes detect corruption, not publisher identity. Trusted local development only."})
+}
+
+fn check_hashes(checksums: &Checksums, files: &BTreeMap<String, FileInfo>) -> Result<()> {
+    if checksums.schema_version != 1 || checksums.algorithm != "sha256" {
+        return Err(bad("unsupported checksum schema/algorithm"));
     }
     if checksums.files.len() != files.len()
         || files
@@ -428,7 +433,31 @@ fn read_tar(input: &mut impl Read, limits: Limits) -> Result<Inspection> {
             "checksum inventory must exactly cover every regular file except checksums.json".into(),
         ));
     }
-    Ok(Inspection{manifest,files,authenticated:false,warning:"Unsigned ZPK: hashes detect corruption, not publisher identity. Trusted local development only."})
+    Ok(())
+}
+
+/// Reuse the exact strict checksum contract for an already installed, bounded inventory.
+pub fn verify_checksums(bytes: &[u8], files: &BTreeMap<String, FileInfo>) -> Result<()> {
+    if bytes.len() > 1024 * 1024 {
+        return Err(Error::Limit("checksums exceeds 1 MiB".into()));
+    }
+    let sums: Checksums =
+        serde_json::from_slice(bytes).map_err(|e| bad(format!("checksums.json: {e}")))?;
+    check_hashes(&sums, files)
+}
+/// Content validation without extraction/execution. Call Manifest::validate first.
+pub fn validate_file_content(file: &PackageFile, data: &[u8]) -> Result<()> {
+    if data.len() > 64 * 1024 * 1024
+        || (matches!(file.kind, FileKind::Ui | FileKind::Icon) && data.len() > 1024 * 1024)
+    {
+        return Err(Error::Limit("file content".into()));
+    }
+    let prefix = if matches!(file.kind, FileKind::Executable | FileKind::Library) {
+        &data[..data.len().min(64 * 1024)]
+    } else {
+        data
+    };
+    validate_file(file, data.len() as u64, prefix)
 }
 
 fn validate_file(file: &PackageFile, size: u64, data: &[u8]) -> Result<()> {

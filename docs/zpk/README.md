@@ -8,6 +8,11 @@ images or container runtime are part of ZPK. Genesis remains at 0.6.1.
 [ZPK Forge (TASK 01)](FORGE.md) adds isolated source builds and offline native packaging.
 Docker is used only for development builds/tests, not by produced applications at runtime.
 
+[Native ZPK Runtime (TASK 02)](RUNTIME.md) adds dedicated identities, native process
+lifecycle through OpenRC and tested Linux policy layers. Real integration uses a
+disposable QEMU VM, not a runtime container. No package installer or authenticated
+Core API bridge is included.
+
 **Unsigned ZPK files are limited to trusted local development. SHA-256 detects
 corruption and inventory changes; it does not authenticate publishers. An attacker
 can replace both content and checksums.** Valid inspection is not permission to run

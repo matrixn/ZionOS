@@ -18,7 +18,7 @@ sha2 = "0.10.9"
 semver = "1.0"
 tar = "0.4"
 zstd = { version = "0.13.3", default-features = false }
-goblin = "0.10"
+zpk-common = { path = "../zpk-common" }
 tempfile = "3"
 
 [[test]]

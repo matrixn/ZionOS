@@ -1,0 +1,59 @@
+schema_version = 1
+permissions = ["background-service", "persistent-data", "configuration-write"]
+
+[package]
+id = "org.zionos.runtime-demo"
+name = "ZPK Runtime Demo"
+version = "1.0.0"
+description = "Minimal native application for trusted local ZPK development."
+author = "ZionOS contributors"
+license = "MIT"
+categories = ["development"]
+
+[target]
+os = "linux"
+architecture = "x86_64"
+cpu = "x86-64-v1"
+libc = "musl"
+
+[build]
+system = "rust"
+toolchain = "rustc; x86_64-unknown-linux-musl; target-cpu=x86-64"
+reproducible = false
+
+[runtime]
+dependencies = []
+
+[compatibility]
+min_zionos = "0.6.1"
+upgrades_from = ">=0.1.0, <1.0.0"
+data_schema = 1
+conflicts = []
+replaces = []
+
+[[files]]
+path = "payload/bin/runtime-demo"
+kind = "executable"
+linkage = "static"
+permissions = []
+
+[service]
+executable = "payload/bin/runtime-demo"
+arguments = []
+run_as = "package"
+autostart = false
+permissions = []
+
+[[storage]]
+name = "state"
+kind = "data"
+schema = 1
+max_bytes = 8388608
+preserve_on_upgrade = true
+
+[[storage]]
+name = "settings"
+kind = "config"
+schema = 1
+max_bytes = 65536
+preserve_on_upgrade = true

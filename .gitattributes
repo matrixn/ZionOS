@@ -3,6 +3,7 @@
 * text=auto
 *.sh text eol=lf
 *.initd text eol=lf
+crates/zpk-runtime/openrc/*.in text eol=lf
 platform/alpine/zion-lab-* text eol=lf
 platform/alpine/zion-init-wrapper text eol=lf
 platform/alpine/zion-launch-contract text eol=lf

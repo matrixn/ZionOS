@@ -2,13 +2,22 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation, feat/zpk-forge]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Runtime policy and mocked OpenRC checks (no host service changes)
+        run: bash tests/zpk/runtime-check.sh
   forge:
     runs-on: ubuntu-latest
     timeout-minutes: 20

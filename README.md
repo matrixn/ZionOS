@@ -191,6 +191,35 @@ La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
 suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
 · [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
 
+## Native ZPK Runtime — TASK 02
+
+- [x] `crates/zpk-runtime`: model de configurare administrator, lifecycle nativ și adaptor OpenRC extensibil.
+- [x] Start/stop/restart/status, health de proces sau Unix socket, logs și autostart;
+  respawn și oprire de grup prin `supervise-daemon`, fără supervisor global nou.
+- [x] Servicii background, backend comun pentru mai multe intrări desktop și model
+  on-demand/static fără daemon permanent obligatoriu.
+- [x] Versiuni root-owned în `/opt/zionos/apps/<id>/versions`, referință `current`,
+  date/config/loguri separate și directoare private cu identități dedicate neprivilegiate.
+- [x] Landlock ABI >=6 obligatoriu, seccomp x86-64, capabilități eliminate, no_new_privs
+  și limite rlimit; acces NAS/dispozitive/shell/IP și IPC neautorizat refuzat în VM.
+- [x] 13 teste unitare cu OpenRC mock și integrare nativă QEMU: lifecycle, crash budget,
+  CPU/memorie/FD/procese/fișiere, sănătate Unix, logs, autostart și date păstrate la restart.
+- [x] `zpk-common` partajează acum inspecția ELF între Forge și Runtime, fără Docker în runtime.
+- [ ] Broker autentificat, activare UI din desktop, cgroup-uri agregate, cote filesystem,
+  instalare/upgrade și persistență după reboot: neimplementate/nevalidate în acest task.
+
+Aplicațiile rulează ca procese Linux native: **fără Docker/OCI/Kubernetes la runtime**.
+Restricțiile implementate nu sunt o izolare echivalentă unei VM; declarațiile de
+permisiuni nu acordă singure acces OS. ISO-ul live nu presupune persistență și runtime-ul
+nu este adăugat automat în el. [Arhitectură, comenzi și proprietăți](docs/zpk/RUNTIME.md)
+· [Verificări](docs/zpk/RUNTIME_VERIFICATION.md).
+
+```bash
+bash tests/zpk/runtime-check.sh
+# După ce există ISO-ul Genesis; aplicațiile rulează numai în VM temporară:
+bash tests/zpk/runtime-check.sh --vm
+```
+
 ## Build și teste Genesis: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,
