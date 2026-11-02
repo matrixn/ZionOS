@@ -282,6 +282,29 @@ fn parse_smart(info: &Value) -> SmartInfo {
     }
 }
 
+fn smart_result(info: &Value) -> SmartInfo {
+    let Some(status) = info
+        .pointer("/smartctl/exit_status")
+        .and_then(Value::as_u64)
+    else {
+        return SmartInfo::unavailable("SMART exit status is missing");
+    };
+    // -n standby,3 gives standby a distinct status from device-open failure (2).
+    if status == 3 {
+        return SmartInfo {
+            status: "standby".into(),
+            temperature_c: None,
+            power_on_hours: None,
+            percentage_used: None,
+            reason: Some("Discul este în standby".into()),
+        };
+    }
+    if status & 3 != 0 {
+        return SmartInfo::unavailable("Dispozitivul nu poate fi accesat prin SMART");
+    }
+    parse_smart(info)
+}
+
 async fn probe_smart(disk: &str) -> SmartInfo {
     // Do not attempt SMART on logical/virtual devices. Unsupported devices are explicitly unknown.
     if disk.starts_with("vd")
@@ -298,7 +321,7 @@ async fn probe_smart(disk: &str) -> SmartInfo {
     }
     let mut cmd = Command::new("smartctl");
     // -n standby minimizes wake-ups of sleeping ATA drives.
-    cmd.args(["-j", "-H", "-A", "-i", "-n", "standby", &path])
+    cmd.args(["-j", "-H", "-A", "-i", "-n", "standby,3", &path])
         .kill_on_drop(true);
     match timeout(SMART_TIMEOUT, cmd.output()).await {
         Err(_) => SmartInfo::unavailable("SMART nu a răspuns în 3 secunde"),
@@ -310,23 +333,7 @@ async fn probe_smart(disk: &str) -> SmartInfo {
             let Ok(json) = serde_json::from_slice::<Value>(&out.stdout) else {
                 return SmartInfo::unavailable("Dispozitivul nu oferă date SMART compatibile");
             };
-            let status = json
-                .pointer("/smartctl/exit_status")
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
-            if status & 2 != 0 {
-                return SmartInfo {
-                    status: "standby".into(),
-                    temperature_c: None,
-                    power_on_hours: None,
-                    percentage_used: None,
-                    reason: Some("Discul este în standby sau nu răspunde".into()),
-                };
-            }
-            if status & 1 != 0 || status & 2 != 0 {
-                return SmartInfo::unavailable("Dispozitivul nu poate fi accesat prin SMART");
-            }
-            parse_smart(&json)
+            smart_result(&json)
         }
     }
 }
@@ -426,6 +433,24 @@ mod tests {
         assert_eq!(smart.status, "passed");
         assert_eq!(smart.temperature_c, Some(37));
         assert_eq!(smart.power_on_hours, Some(127));
+    }
+    #[test]
+    fn smart_access_errors_are_not_standby() {
+        for status in [1, 2] {
+            let json = serde_json::json!({"smartctl":{"exit_status":status}});
+            assert_eq!(smart_result(&json).status, "unavailable");
+        }
+        let standby = serde_json::json!({"smartctl":{"exit_status":3}});
+        assert_eq!(smart_result(&standby).status, "standby");
+        assert_eq!(smart_result(&serde_json::json!({})).status, "unavailable");
+    }
+
+    #[test]
+    fn smart_health_failure_is_preserved() {
+        let failed = serde_json::json!({
+            "smartctl":{"exit_status":8}, "smart_status":{"passed":false}
+        });
+        assert_eq!(smart_result(&failed).status, "failed");
     }
     #[test]
     fn test_sector_conversion() {

@@ -10,14 +10,16 @@ command -v docker >/dev/null || {
 
 for file in \
   "$ROOT/platform/alpine/mkimg.zionos.sh" \
-  "$ROOT/platform/alpine/genapkovl-zionos.sh"; do
+  "$ROOT/platform/alpine/genapkovl-zionos.sh" \
+  "$ROOT/platform/alpine/initramfs-banner.sh" \
+  "$ROOT/scripts/brand-initramfs.sh"; do
   if [[ ! -f "$file" ]]; then
     echo "ERROR: Required file missing: $file"
     exit 1
   fi
 done
 
-"$ROOT/scripts/build-core.sh"
+bash "$ROOT/scripts/build-core.sh"
 mkdir -p "$ROOT/build/iso"
 
 docker run --rm --privileged -i \
@@ -28,7 +30,14 @@ docker run --rm --privileged -i \
 apk add --no-cache \
   alpine-sdk abuild alpine-conf \
   syslinux xorriso squashfs-tools \
-  grub grub-efi mtools git openssl
+  grub grub-efi mtools git openssl mkinitfs
+
+# update-kernel calls the builder's mkinitfs, whose default /init comes from here.
+# Change only this ephemeral container; preserve the upstream init body verbatim.
+sh /workspace/scripts/brand-initramfs.sh \
+  /usr/share/mkinitfs/initramfs-init \
+  /workspace/platform/alpine/initramfs-banner.sh \
+  /usr/share/mkinitfs/initramfs-init
 
 mkdir -p /root/.abuild /workspace/build/iso
 abuild-keygen -a -n
@@ -72,12 +81,26 @@ test -f "$ZION_APKOVL_SCRIPT" || {
 echo "ZionOS profile and overlay are ready."
 
 /tmp/aports/scripts/mkimage.sh \
-  --tag 0.1.0 \
+  --tag 0.6.0 \
   --arch x86_64 \
   --profile zionos \
   --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/main \
   --outdir /workspace/build/iso \
   --workdir /tmp/zionos-mkimage
+
+# Inspect the initramfs that was actually placed inside the resulting ISO.
+iso=/workspace/build/iso/zionos-genesis-0.6.0-x86_64.iso
+test -s "$iso"
+checkdir="$(mktemp -d)"
+trap 'rm -rf "$checkdir"' EXIT
+xorriso -osirrox on -indev "$iso" \
+  -extract /boot/initramfs-lts "$checkdir/initramfs.gz"
+gzip -dc "$checkdir/initramfs.gz" > "$checkdir/initramfs.cpio"
+(cd "$checkdir" && cpio -i init ./init < initramfs.cpio)
+test -x "$checkdir/init"
+sh -n "$checkdir/init"
+test "$(grep -c ZIONOS_INITRAMFS_BANNER "$checkdir/init")" -eq 1
+echo 'PASS: final ISO contains executable /init with early ZionOS branding.'
 
 ALPINE_SCRIPT
 

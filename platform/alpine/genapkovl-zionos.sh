@@ -55,9 +55,7 @@ for item in 'devfs sysinit' 'dmesg sysinit' 'mdev sysinit' 'hwdrivers sysinit' '
   ln -sf "/etc/init.d/$1" "$tmp/etc/runlevels/$2/$1"
 done
 # The overlay is an archive of root paths, not an APK package.
-# ZIONOS_EARLY_BOOT_FIXED_061
-# Include wrapper-ul in /usr/local/sbin (directorul usr este deja in apkovl).
-# Nu modificam /sbin din baza Alpine si nu avem nevoie de directorul sbin in tar.
+# Keep one early-boot wrapper in the archived /usr/local/sbin directory.
 mkdir -p "$tmp/usr/local/sbin" "$tmp/etc"
 cat > "$tmp/usr/local/sbin/zion-init-wrapper" <<'ZION_EARLY_INIT'
 #!/bin/sh
@@ -98,58 +96,12 @@ test -x "$tmp/usr/local/sbin/zion-init-wrapper" || {
     echo "ERROR: lipseste zion-init-wrapper" >&2
     exit 1
 }
-# END_ZIONOS_EARLY_BOOT_FIXED_061
+for executable in usr/local/sbin/zion-lab-provision usr/local/sbin/zion-lab-recover \
+    opt/zionos/bin/zion-core etc/init.d/zion-core; do
+    test -x "$tmp/$executable" || { echo "ERROR: missing executable $executable" >&2; exit 1; }
+done
+for asset in etc/inittab opt/zionos/web/index.html opt/zionos/web/app.js; do
+    test -s "$tmp/$asset" || { echo "ERROR: missing or empty $asset" >&2; exit 1; }
+done
 
 tar -C "$tmp" -czf "$PWD/$HOSTNAME.apkovl.tar.gz" etc opt usr
-
-
-# ==========================================
-# ZION OS - EARLY BOOT CONSOLE
-# ==========================================
-
-mkdir -p "$tmp/sbin"
-
-cat > "$tmp/sbin/zion-init-wrapper" <<'ZION_INIT'
-#!/bin/sh
-
-CYAN="$(printf '\033[1;36m')"
-GREEN="$(printf '\033[1;32m')"
-YELLOW="$(printf '\033[1;33m')"
-WHITE="$(printf '\033[1;37m')"
-RESET="$(printf '\033[0m')"
-
-printf '\n'
-printf '%s\n' "${CYAN}============================================================${RESET}"
-printf '%s\n' "${WHITE}  ZION OS - GENESIS 0.6${RESET}"
-printf '%s\n' "  Alpine Linux 3.23 | Kernel $(uname -r) | $(uname -m)"
-printf '%s\n' "${CYAN}============================================================${RESET}"
-printf '\n'
-
-printf '%s\n' "${GREEN}[SYSTEM]${RESET} Initializam ZionOS Boot Environment."
-printf '%s\n' "${YELLOW}[INIT]${RESET} Pornim OpenRC pentru gestionarea serviciilor."
-printf '%s\n' "${YELLOW}[FILESYSTEM]${RESET} Pregatim memoria si sistemele de fisiere."
-printf '%s\n' "${YELLOW}[HARDWARE]${RESET} Initializam dispozitivele si driverele."
-printf '%s\n' "${YELLOW}[NETWORK]${RESET} Configuram reteaua si conectivitatea."
-printf '%s\n' "${YELLOW}[STORAGE]${RESET} Pregatim serviciile de stocare NAS."
-printf '\n'
-
-exec /sbin/openrc sysinit
-ZION_INIT
-
-chmod 755 "$tmp/sbin/zion-init-wrapper"
-
-# BusyBox init: pastram toate cele trei etape
-# OpenRC: sysinit -> boot -> default.
-
-cat > "$tmp/etc/inittab" <<'ZION_INITTAB'
-::sysinit:/sbin/zion-init-wrapper
-::sysinit:/sbin/openrc boot
-::wait:/sbin/openrc default
-
-ttyS0::respawn:/sbin/getty 115200 ttyS0 vt100
-tty1::respawn:/sbin/getty 38400 tty1 linux
-
-::ctrlaltdel:/sbin/reboot
-::shutdown:/sbin/openrc shutdown
-ZION_INITTAB
-

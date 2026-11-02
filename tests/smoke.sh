@@ -48,4 +48,8 @@ assert j["recovery"]["recovery_point_available"] is False
 '
 grep -q 'data-lab-recovery' "$TMP/index.html"
 grep -q '/api/provisioning' "$TMP/app.js"
+for route in health metrics storage pools provisioning; do
+  status="$(curl -sS --max-time 8 -o /dev/null -w '%{http_code}' -X POST "$BASE/api/$route")"
+  [ "$status" = 405 ] || { echo "Unexpected POST status for $route: $status"; exit 1; }
+done
 echo 'PASS: Genesis 0.6 health, metrics, storage, pools, provisioning read-only and recovery guidance' 

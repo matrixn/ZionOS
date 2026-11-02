@@ -8,5 +8,5 @@ if [[ ! -e "$LAB" ]]; then
 fi
 # run-qemu.sh creates vda. We add a separate disposable virtual vdb here.
 # Never point this argument to a physical disk or an existing user image.
-"$ROOT/scripts/run-qemu.sh" \
+exec bash "$ROOT/scripts/run-qemu.sh" \
   -drive "file=$LAB,format=qcow2,if=virtio"

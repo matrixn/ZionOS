@@ -47,3 +47,5 @@ Do not claim ISO/QEMU tests passed when those tools are unavailable. Do not exec
 - Make focused edits and run available verification.
 - Report changed files, tests passed/failed/not run, remaining hazards and any manual QEMU validation needed.
 - Keep README and inline docs consistent with actual behavior.
+- Maintain a cumulative feature checklist in README and keep the audit/roadmap and component READMEs current. Distinguish implemented features from executed verification.
+- When commit/push is authorized, publish each coherent batch after its applicable tests and build pass, including the documentation updates. Keep generated artifacts out of Git; do not merge automatically. End the task with a change summary, verification limits, and exact build/run/test commands.

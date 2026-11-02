@@ -35,7 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sh -n platform/alpine/genapkovl-zionos.sh
+          for script in platform/alpine/*.sh; do sh -n "$script"; done
+          for script in platform/alpine/*.initd; do sh -n "$script"; done
           for script in platform/alpine/zion-lab-provision platform/alpine/zion-lab-recover; do
             if [ -f "$script" ]; then sh -n "$script"; fi
           done
