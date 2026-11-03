@@ -191,6 +191,34 @@ La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
 suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
 · [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
 
+## ZPK End-to-End Integration — TASK 05
+
+- [x] Source → Forge → validare `.zpk` → Manager local → OpenRC non-root → launcher/fereastră.
+- [x] Trei booturi curate cu același QCOW2: registry, UID și setări native păstrate.
+- [x] Upgrade real `1.0.0` → `1.1.0`; pornirea eșuată a candidatului `1.2.0` restaurează executabilul anterior.
+- [x] Întreruperi reale ale Manager: instalare staged și upgrade în activare, recuperat după reboot.
+- [x] Ferestre/assets retrase la upgrade/uninstall; datele rămân după dezinstalare.
+- [x] Setare nativă bounded, scrisă atomic de backend; acces local prin socket Unix privat.
+- [x] Mediu interactiv separat și imagini noi în `build/`; niciun disc fizic, fără `-snapshot` în testul persistent.
+- [x] Același scenariu complet verificat pe CPU Conroe emulat/TCG, separat de KVM; hardware Core 2 fizic neverificat.
+- [ ] Setări editabile din UI/SDK: necesită broker autentificat; răspunsul actual rămâne `UNAVAILABLE`.
+- [ ] Persistență automată de producție în ISO-ul live; bootstrap-ul E2E este exclusiv pentru VM-ul de test.
+
+[Ghid complet build/install/launch/upgrade](docs/zpk/E2E.md),
+[raport tehnic și verificări](docs/zpk/E2E_VERIFICATION.md).
+
+```sh
+bash tests/e2e/check.sh                  # teste rapide și regresii SDK
+bash tests/e2e/check.sh --packages       # trei versiuni compilate prin Forge
+bash scripts/build-iso.sh
+bash scripts/test-vm.sh --zpk-e2e        # trei booturi persistente + Chromium
+bash tests/e2e/check.sh --legacy-vm      # același scenariu, CPU Conroe/TCG
+bash tests/e2e/check.sh --interactive    # aplicație instalată; localhost:8080
+```
+
+Comenzile necesită toolchain/builder/Chromium pregătite conform ghidului. Pornirea
+normală `bash scripts/run-qemu.sh` păstrează ISO-ul live cu aplicațiile built-in.
+
 ## Zion App SDK & Native Desktop Integration — TASK 04
 
 - [x] Registry dinamic built-in + ZPK instalate/activate; `GET /api/apps` read-only.

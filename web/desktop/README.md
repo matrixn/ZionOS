@@ -1,5 +1,10 @@
 # ZionOS Desktop
 
+TASK 05 adds [three-boot native integration](../../docs/zpk/E2E.md), using the same
+window manager and Core asset routes. Its Chromium observer keeps a real app window
+open during local guest CLI upgrade/uninstall and checks live revocation. This does
+not grant privileged lifecycle/settings operations to browser JavaScript.
+
 - [x] ISO: `index.html`, `app.js`, `apps/registry.js`, `apps/bridge.js`, fără framework la runtime.
 - [x] `scripts/build-core.sh` copiază aceste fișiere în staging.
 - [x] Teme, dock, ferestre, monitorizare, Storage Manager și Capacity Lab în shell-ul static.

@@ -6,6 +6,7 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
 const ROOT=path.resolve(__dirname,'../..');
 const {chromium}=require(path.join(ROOT,'web/zion-app-sdk/node_modules/playwright'));
 const ID='zpk:org.zionos.zion-hello/main',PACKAGE='org.zionos.zion-hello';
+const VERSION=process.env.ZION_SDK_VERSION||'1.0.0';
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function wait(fn,message,timeout=12000){let error;const until=Date.now()+timeout;while(Date.now()<until){try{if(await fn())return;}catch(e){error=e;}await delay(70);}throw new Error(`${message}${error?`: ${error.message}`:''}`);}
 async function freePort(){const server=net.createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
@@ -35,10 +36,12 @@ async function main(){
     await page.route('**/api/pools',route=>route.fulfill({json:{mode:'read-only',pools:[],volumes:[],candidates:[]}}));
     await page.route('**/api/provisioning',route=>route.fulfill({json:{mode:'read-only',execution_enabled:false,reasons:[],recovery:{automatic_repairs:false}}}));
     await page.goto(origin);await wait(()=>page.locator('.os-window[data-app="overview"]').count(),'Built-in overview missing');
-    assert.equal(await page.locator('.launcher-app').count(),external&&!removed?8:7);
+    const expectedApps=external&&!removed?8:7;
+    await wait(()=>page.locator('.launcher-app').count().then(n=>n===expectedApps),'Initial asynchronous launcher discovery did not complete');
+    assert.equal(await page.locator('.launcher-app').count(),expectedApps);
     if(removed){
       assert.equal(await page.locator(`.launcher-app[data-open="${ID}"]`).count(),0);
-      assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/1.0.0/ui/index.html`)).status(),404);
+      assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/${VERSION}/ui/index.html`)).status(),404);
       console.log('PASS browser VM uninstall discovery and asset revocation');return;
     }
     if(!external){
@@ -46,7 +49,7 @@ async function main(){
       fixtureCall('install',archive);
     }
     await wait(()=>page.locator(`.launcher-app[data-open="${ID}"]`).count(),'Installed app was not discovered automatically');
-    const registry=await (await fetch(`${origin}/api/apps`)).json();assert.equal(registry.authentication.authenticated,false);assert.equal(registry.authentication.required_for_remote,true);assert.equal(registry.apps[0].id,ID);
+    const registry=await (await fetch(`${origin}/api/apps`)).json();assert.equal(registry.authentication.authenticated,false);assert.equal(registry.authentication.required_for_remote,true);assert.equal(registry.apps[0].id,ID);assert.equal(registry.apps[0].version,VERSION);
     const launcher=page.locator('#launcher-input');await page.locator('#brand-launcher').click();await launcher.fill('development');
     assert.equal(await page.locator(`.launcher-app[data-open="${ID}"]`).isVisible(),true);
     await page.locator(`.launcher-app[data-open="${ID}"]`).click();
@@ -62,12 +65,12 @@ async function main(){
     });assert.deepEqual(isolation,{parent:true,cookie:true,storage:true});
     assert.equal(await frame.evaluate(async()=>{try{await fetch('/api/metrics');return false;}catch{return true;}}),true);
     assert.equal(await frame.evaluate(()=>window.open('https://example.com')===null),true);
-    const asset=await page.request.get(`${origin}/app-assets/${PACKAGE}/1.0.0/ui/index.html`);
+    const asset=await page.request.get(`${origin}/app-assets/${PACKAGE}/${VERSION}/ui/index.html`);
     assert.ok(asset.headers()['content-security-policy'].includes("sandbox allow-scripts"));assert.ok(!asset.headers()['content-security-policy'].includes('allow-same-origin'));
-    for(const suffix of ['payload/bin/zion-hello','manifest.toml','LICENSE','assets/absent.js','%2e%2e%2fetc%2fpasswd','%2fetc%2fpasswd'])assert.notEqual((await page.request.get(`${origin}/app-assets/${PACKAGE}/1.0.0/${suffix}`)).status(),200,suffix);
+    for(const suffix of ['payload/bin/zion-hello','manifest.toml','LICENSE','assets/absent.js','%2e%2e%2fetc%2fpasswd','%2fetc%2fpasswd'])assert.notEqual((await page.request.get(`${origin}/app-assets/${PACKAGE}/${VERSION}/${suffix}`)).status(),200,suffix);
     assert.equal((await page.request.post(`${origin}/api/apps`)).status(),405);
     assert.equal((await page.request.get(`${origin}/api/apps`,{headers:{Origin:'null'}})).status(),403);
-    assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/1.0.0/assets/hello.js`,{headers:{Origin:'null'}})).status(),200);
+    assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/${VERSION}/assets/hello.js`,{headers:{Origin:'null'}})).status(),200);
     await frame.locator('#notify').click();await wait(async()=> (await page.locator('#toast-text').textContent()).includes('Your native application'),'Notification was not shown by the desktop');
     await page.locator('#theme-toggle').click();await wait(()=>frame.locator('html').getAttribute('data-theme').then(v=>v==='light'),'Theme subscription did not update app');
     await frame.locator('#directory').click();await wait(async()=> (await frame.locator('#result').textContent()).includes('UNAVAILABLE: Directory'),'Unavailable directory capability was not typed');
@@ -103,7 +106,7 @@ async function main(){
       fixtureCall('enable',PACKAGE);await wait(()=>page.locator(`.launcher-app[data-open="${ID}"]`).count(),'Enabled app missing');
       await page.locator('#brand-launcher').click();await launcher.fill('Zion Hello');await launcher.press('Enter');await wait(()=>windows().count(),'App did not reopen after enable');
       fixtureCall('uninstall',PACKAGE);await wait(()=>page.locator(`.launcher-app[data-open="${ID}"]`).count().then(n=>n===0),'Removed app still in launcher');assert.equal(await windows().count(),0);
-      assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/1.0.0/ui/index.html`)).status(),404);
+      assert.equal((await page.request.get(`${origin}/app-assets/${PACKAGE}/${VERSION}/ui/index.html`)).status(),404);
     }
     console.log(`PASS browser ${external?'native VM':'mock installer'}: discovery, icon, SDK, isolation/CSP, theme, notification/dialog, unsupported capabilities, multiple windows, drag/resize/min/max, pin/search/keyboard/mobile${external?'':', enable/disable/uninstall'}`);
   }catch(error){console.error(output);throw error;}

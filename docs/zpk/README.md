@@ -1,5 +1,10 @@
 # Zion Package Format — v1 foundation
 
+For the integrated Source → Forge → Manager → OpenRC → Desktop → upgrade/uninstall
+journey and persistent QEMU environment, start with [TASK 05](E2E.md). It reuses
+these components and leaves HTTP read-only. Native persistent settings do not enable
+the unavailable browser settings API. [Executed results](E2E_VERIFICATION.md).
+
 ZPK is an independently designed, native Linux application archive. This foundation
 defines declarations and offline inspection only. It does not install applications,
 start services, grant permissions, modify storage, or extend the HTTP API. No Docker

@@ -205,3 +205,11 @@ Backendul exemplului este nativ OpenRC non-root; nu se adaugă instalare HTTP sa
 acces NAS. [Verificările](zpk/APP_SDK_VERIFICATION.md) includ ISO final, Chromium
 și QEMU real. Pentru producție rămân autentificarea, origini dedicate, brokerul nativ,
 cote agregate și persistența pregătită explicit. CSP nu izolează complet rețeaua.
+
+## Milestone separat: integrare ZPK (TASK 05)
+
+[Scenariul complet](zpk/E2E.md) leagă Forge, Manager, OpenRC și SDK în trei booturi
+cu același QCOW2 nou. Verifică registry/UID/setări native persistente, upgrade,
+compensarea pornirii eșuate, recuperarea unui jurnal întrerupt și dezinstalarea cu
+păstrarea datelor. Bootstrap-ul este exclusiv de test; ISO-ul live nu primește montare
+automată și API-urile rămân read-only. [Raport tehnic](zpk/E2E_VERIFICATION.md).

@@ -1,5 +1,9 @@
 # Zion App SDK 1.0 and native desktop integration — TASK 04
 
+[TASK 05](E2E.md) adds a real three-boot persistent integration environment, native
+settings through local Unix IPC, upgrades and interrupted-operation recovery. It
+does not enable browser settings/files or privileged HTTP lifecycle operations.
+
 Installed ZPK desktop entries join the existing ZionOS launcher, dock and window
 manager. The native backend stays an Alpine Linux/OpenRC process. Its UI is an
 isolated browser document; no native GUI display server, runtime container or

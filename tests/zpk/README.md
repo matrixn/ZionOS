@@ -1,5 +1,9 @@
 # ZPK regression suite
 
+For the integrated native app/desktop journey across persistent reboots, see
+[tests/e2e](../e2e/README.md) and [TASK 05](../../docs/zpk/E2E.md).
+The existing component tests below remain separate regression coverage.
+
 Run from the repository root:
 
 ```sh

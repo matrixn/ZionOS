@@ -2,7 +2,7 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk, feat/zpk-e2e-integration]
   pull_request:
 
 permissions:
@@ -15,6 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -29,6 +31,8 @@ jobs:
         run: cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello --prepare-builder
       - name: SDK types/protocol and real browser integration (no host application services)
         run: bash tests/apps/check.sh --browser
+      - name: E2E image guardrails and three real Forge package versions (no host installation)
+        run: bash tests/e2e/check.sh --packages
   manager:
     runs-on: ubuntu-latest
     timeout-minutes: 10

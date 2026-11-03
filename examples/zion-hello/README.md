@@ -6,6 +6,20 @@ UI imports Zion App SDK 1.0, changes its window title, reads/subscribes to theme
 shows a desktop notification and confirmation dialog, and demonstrates typed unavailable
 file/settings capabilities. Multiple windows share the single backend service.
 
+TASK 05 adds a real native persistent greeting (`state/greeting.txt`, mode 0600),
+bounded private Unix-socket settings commands and atomic/fsynced writes. Browser
+settings remain unavailable until a secure authenticated broker exists. The
+[complete journey](../../docs/zpk/E2E.md) covers Forge setup, target CLI, interactive
+VM, three boots, upgrade/failed-start recovery and uninstall.
+
+```sh
+bash scripts/test-vm.sh --zpk-e2e       # three boots on one new persistent QCOW2
+bash tests/e2e/check.sh --interactive  # desktop + local status/settings/upgrade commands
+```
+
+Each run retains its unique `build/e2e-XXXXXX/` evidence/disk; existing images are
+never overwritten. `--fail-start` is an explicit failure fixture, not normal startup.
+
 ```sh
 npm --prefix web/zion-app-sdk ci --ignore-scripts --no-audit --no-fund
 npm --prefix web/zion-app-sdk run build

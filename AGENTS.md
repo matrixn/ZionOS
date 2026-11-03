@@ -73,6 +73,18 @@ opaque iframes, source/session validation and the read-only Core boundary intact
 Do not claim CSP prevents all network egress, or replace typed unavailable file/settings
 APIs with fake persistence. Native broker operations require future authentication.
 
+For full native lifecycle integration read `docs/zpk/E2E.md`. Run
+`bash tests/e2e/check.sh` (image guards, SDK and first-party settings tests),
+`--packages` (three Forge-built versions), and `bash scripts/test-vm.sh --zpk-e2e`
+(three clean boots of one persistent QCOW2). `--legacy-vm` uses TCG/Conroe.
+Default Genesis smoke tests must retain `-snapshot`; persistence tests must never
+use it. E2E filesystem creation only targets freshly/exclusively created regular
+files inside `build/`, pinned by descriptors. Never reuse/format a user image.
+The guarded E2E helper/fault injection is a development fixture, not deployed in
+the production ISO or exposed through Manager's CLI/HTTP. Native sample settings
+use its private Unix socket/state; SDK settings remain unavailable until an
+authenticated broker exists. Interactive tests accept documented local commands only.
+
 - First summarize what the affected code currently does, identify risks, and propose a limited change.
 - Make focused edits and run available verification.
 - Report changed files, tests passed/failed/not run, remaining hazards and any manual QEMU validation needed.

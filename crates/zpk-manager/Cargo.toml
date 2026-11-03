@@ -17,6 +17,10 @@ path = "../../tests/zpk/manager-guest.rs"
 name = "zpk-sdk-fixture"
 path = "../../tests/apps/fixture.rs"
 
+[[bin]]
+name = "zpk-e2e-guest"
+path = "../../tests/e2e/guest.rs"
+
 [dependencies]
 zpk-schema = { path = "../zpk-schema" }
 zpk-runtime = { path = "../zpk-runtime" }

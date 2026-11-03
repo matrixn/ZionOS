@@ -6,7 +6,7 @@ permissions:
 jobs:
   native-desktop:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -29,3 +29,5 @@ jobs:
           bash scripts/build-iso.sh
       - name: Native non-root backend, real browser SDK, read-only Core and uninstall revocation
         run: bash tests/apps/check.sh --vm
+      - name: Three-boot native lifecycle, persistent settings, upgrades and crash recovery
+        run: bash scripts/test-vm.sh --zpk-e2e

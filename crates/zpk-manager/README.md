@@ -1,5 +1,10 @@
 # zpk-manager
 
+TASK 05 integrates the real Manager with Forge, SDK and persistent native app state:
+[developer journey](../../docs/zpk/E2E.md). `bash scripts/test-vm.sh --zpk-e2e`
+tests three boots, upgrades and interrupted activation. The additional `zpk-e2e-guest`
+binary is a guarded trusted development fixture, not a production command/helper.
+
 Local native package transactions and Alpine/OpenRC privileged adapter. No HTTP
 installer, runtime containers or package-provided privileged scripts.
 
