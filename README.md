@@ -12,6 +12,12 @@ pentru 0.7. [Raportul 0.6.1](docs/GENESIS_061.md) descrie remedierile și limite
 
 ## Checklist cumulativ: Genesis 0.1–0.6.1
 
+Fundația control-plane pentru 0.7 este în `crates/zpk-control/`: autentificare
+Argon2id, sesiuni/CSRF, IPC Unix cu identitate verificată, adapter Manager și boot
+pe volum ext4 configurat prin UUID. Integrarea în ISO și interfața grafică sunt
+livrate separat; acest modul nu expune singur endpointuri HTTP sau un formatter.
+
+
 Istoricul a fost reconciliat cu conversația inițială „Utilitatea unui OS multiplatformă”
 și cu sursele actuale. `[x]` indică implementare prezentă; verificările sunt raportate
 separat. Nu presupune că toate scenariile hardware au fost validate.
