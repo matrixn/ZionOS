@@ -36,7 +36,7 @@ async function main(){
     await page.route('**/api/pools',route=>route.fulfill({json:{mode:'read-only',pools:[],volumes:[],candidates:[]}}));
     await page.route('**/api/provisioning',route=>route.fulfill({json:{mode:'read-only',execution_enabled:false,reasons:[],recovery:{automatic_repairs:false}}}));
     await page.goto(origin);await wait(()=>page.locator('.os-window[data-app="overview"]').count(),'Built-in overview missing');
-    const expectedApps=external&&!removed?8:7;
+    const expectedApps=external&&!removed?9:8;
     await wait(()=>page.locator('.launcher-app').count().then(n=>n===expectedApps),'Initial asynchronous launcher discovery did not complete');
     assert.equal(await page.locator('.launcher-app').count(),expectedApps);
     if(removed){

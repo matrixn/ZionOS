@@ -12,7 +12,7 @@ def main():
     accel=os.environ.get('ZPK_RUNTIME_ACCEL','kvm' if kvm else 'tcg')
     if accel not in ('kvm','tcg'):raise ValueError('ZPK_RUNTIME_ACCEL must be kvm or tcg')
     command=['qemu-system-x86_64','-accel',accel,'-cpu','host' if accel=='kvm' else 'qemu64','-m','2048','-smp','2',
-             '-cdrom',str(ROOT/'build/iso/zionos-genesis-0.6.1-x86_64.iso'),
+             '-cdrom',str(Path(subprocess.check_output(["sh",str(ROOT/"scripts/iso-path.sh")],text=True).strip())),
              '-drive',f'file={ROOT}/build/runtime-fixtures.iso,media=cdrom,readonly=on,index=3',
              '-nic','user,model=e1000','-boot','d','-serial','mon:stdio','-display','none','-snapshot']
     process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)

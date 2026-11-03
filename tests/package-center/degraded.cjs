@@ -1,0 +1,4 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path');
+const {chromium}=require(path.resolve(__dirname,'../../web/zion-app-sdk/node_modules/playwright'));
+(async()=>{const browser=await chromium.launch({headless:true});try{const page=await browser.newPage();await page.goto('http://127.0.0.1:8080');await page.locator('[data-dock=packages]').click();await page.getByRole('heading',{name:'Persistent applications unavailable'}).waitFor();assert.equal(await page.locator('#pc-upload-file').count(),0);assert.equal(await page.locator('#pc-install-confirm').count(),0);await page.screenshot({path:path.join(process.argv[2],'degraded-'+process.argv[3]+'.png'),fullPage:true});console.log('PASS real degraded Package Center: explicit unavailable state, no RAM installer');}finally{await browser.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});

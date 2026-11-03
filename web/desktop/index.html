@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0b1c27">
   <meta name="description" content="ZionOS — personal storage, beautifully simple.">
   <title>ZionOS — Your space, in control</title>
+  <link rel="stylesheet" href="/package-center.css">
   <style>
     /* ZionOS design tokens. No CSS framework or CDN required inside the NAS. */
     :root { color-scheme:dark; --ink:#ecf5f7; --muted:#91a8b1; --faint:#637e8b; --surface:rgba(14,33,46,.83); --surface2:rgba(23,46,58,.84); --surface3:rgba(30,55,67,.76); --edge:rgba(196,227,234,.14); --edge-strong:rgba(205,238,243,.23); --shadow:0 26px 90px rgba(1,9,20,.38),0 8px 24px rgba(0,9,15,.18); --accent:#6fe4cf; --accentDeep:#0a665c; --good:#73dec3; --bad:#ffab9f; --warn:#f3c89c; --chip:rgba(163,220,231,.10); --blur:blur(28px); --radius:20px; --desktopTop:54px; --dockBottom:22px; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
@@ -138,6 +139,7 @@
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z"/><path d="m3 7 9 5 9-5M12 12v10M7.5 4.5l9 5v5"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
     <symbol id="i-hard-drive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="7.5" cy="17" r=".65" fill="currentColor" stroke="none"/><path d="M13 17h4"/></symbol>
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5a2 2 0 0 1 2-2h5l2.2 2.3H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
@@ -175,7 +177,7 @@
     </header>
     <div class="desktop-icons" id="desktop-icons" aria-label="Aplicații desktop"></div>
     <div class="welcome" id="welcome"><div class="eyebrow">WELCOME TO YOUR SPACE</div><h1>Your data.<br>Your universe.</h1><p>Un spațiu calm pentru datele și dispozitivele tale.<br>Tot ce contează, sub controlul tău.</p></div>
-    <div class="desktop-hint">ZionOS <span>Genesis 0.5 · storage discovery</span></div>
+    <div class="desktop-hint">ZionOS <span>Genesis 0.7 · native applications</span></div>
     <div id="window-layer" aria-label="Ferestrele aplicațiilor"></div>
     <div class="launcher-overlay" id="launcher-overlay" aria-hidden="true">
       <div class="launcher-panel" role="dialog" aria-modal="true" aria-label="Aplicații ZionOS">
@@ -200,7 +202,7 @@
     <div class="panel" data-bind="overview-disks">Se încarcă...</div>
   </template>
   <template id="tpl-storage">
-    <div class="window-heading"><div><div class="mini-overline">ZION STORAGE MANAGER · GENESIS 0.6.1</div><h2>Discurile tale, în detaliu.</h2><p>Dispozitive, partiții, volume montate și diagnostic SMART.</p></div><span class="badge">Read-only</span></div>
+    <div class="window-heading"><div><div class="mini-overline">ZION STORAGE MANAGER · GENESIS 0.7.0</div><h2>Discurile tale, în detaliu.</h2><p>Dispozitive, partiții, volume montate și diagnostic SMART.</p></div><span class="badge">Read-only</span></div>
     <div class="notice"><svg class="svg small"><use href="#i-shield"/></svg><span>Mod observație: fără formatare, montare, repartitionare sau operații de scriere. SMART poate fi indisponibil în QEMU.</span></div>
     <div class="storage-totals" data-storage-totals><div class="storage-empty">Se citesc dispozitivele…</div></div>
     <div class="section-title"><h3>Dispozitive fizice și logice</h3><button class="secondary-button" data-storage-refresh="1"><svg class="svg small"><use href="#i-refresh"/></svg> Actualizează</button></div>
@@ -210,7 +212,7 @@
     </div>
     <div class="section-title"><h3>Volume montate</h3><span class="badge" data-storage-mount-count>—</span></div>
     <div class="storage-mounted-list" data-storage-mounts><div class="storage-empty">Se încarcă…</div></div>
-    <div class="section-title pool-section-title"><h3>Storage Pools <span class="pool-beta">GENESIS 0.6.1</span></h3><button class="secondary-button" data-pool-refresh="1"><svg class="svg small"><use href="#i-refresh"/></svg> Rescanează</button></div>
+    <div class="section-title pool-section-title"><h3>Storage Pools <span class="pool-beta">GENESIS 0.7.0</span></h3><button class="secondary-button" data-pool-refresh="1"><svg class="svg small"><use href="#i-refresh"/></svg> Rescanează</button></div>
     <div class="pool-list" data-pool-list><div class="storage-empty">Detectăm RAID și Btrfs…</div></div>
     <div class="section-title"><h3>Volume descoperite</h3><span class="badge" data-volume-count>—</span></div>
     <div class="pool-volume-list" data-pool-volumes><div class="storage-empty">Se caută volumele…</div></div>
@@ -224,10 +226,10 @@
       <div class="pool-disk-selector" data-plan-disks><div class="storage-empty">Se încarcă dispozitivele…</div></div>
       <div class="pool-plan-result" data-plan-result role="status" aria-live="polite">Alege un layout și discurile pentru simulare.</div>
       <button type="button" class="secondary-button pool-plan-copy" data-plan-copy="1" disabled>Copiază rezumatul simulării</button>
-      <p class="storage-footnote">Estimare teoretică, nu verificare de eligibilitate. Un disc fără partiții detectate poate conține date. Genesis 0.6.1 blochează formatarea atât în web, cât și prin --apply; laboratorul oferă numai inspecție și diagnostic read-only.</p>
+      <p class="storage-footnote">Estimare teoretică, nu verificare de eligibilitate. Un disc fără partiții detectate poate conține date. Genesis 0.7.0 blochează formatarea atât în web, cât și prin --apply; laboratorul oferă numai inspecție și diagnostic read-only.</p>
     </div>
 
-    <div class="section-title"><h3>Provisioning Lab <span class="pool-beta">GENESIS 0.6.1</span></h3><button type="button" class="secondary-button" data-lab-refresh>Verifică lab-ul</button></div>
+    <div class="section-title"><h3>Provisioning Lab <span class="pool-beta">GENESIS 0.7.0</span></h3><button type="button" class="secondary-button" data-lab-refresh>Verifică lab-ul</button></div>
     <div class="notice"><svg class="svg small"><use href="#i-shield"/></svg><span>Protecție: interfața web nu formatează și nu montează discuri. Provisioning este disponibil numai din consola VM QEMU, pe /dev/vdb — discul virtual de laborator.</span></div>
     <div class="pool-planner" style="margin-top:13px">
       <div class="pool-plan-heading"><div><div class="mini-overline">DISPOSABLE QEMU DISK ONLY</div><h3>Inspectează laboratorul.</h3><p>Identitate de sesiune, validare și diagnostic. Execuția de formatare este dezactivată în 0.6.1.</p></div><span class="storage-pill warn">Read-only CLI</span></div>
@@ -262,14 +264,15 @@
     <div class="setting-row"><div><div class="setting-label">Aspect</div><div class="setting-hint">Un mod luminos și unul întunecat, ambele cu contrast ridicat.</div></div><div class="segmented"><button data-theme-choice="dark">Întunecat</button><button data-theme-choice="light">Luminos</button></div></div>
     <div class="setting-row"><div><div class="setting-label">Culoare de accent</div><div class="setting-hint">O singură culoare, folosită discret în interfață.</div></div><div class="accent-options"><button class="accent-dot" data-accent-choice="sea" style="--dot:#6fe4cf" aria-label="Verde marin" title="Verde marin"></button><button class="accent-dot" data-accent-choice="blue" style="--dot:#8eb8ff" aria-label="Albastru" title="Albastru"></button><button class="accent-dot" data-accent-choice="violet" style="--dot:#c3a2ff" aria-label="Violet" title="Violet"></button></div></div>
     <div class="setting-row"><div><div class="setting-label">Reducerea animațiilor</div><div class="setting-hint">Respectă preferința sistemului, cu opțiune suplimentară.</div></div><div class="segmented"><button data-motion-choice="normal">Normal</button><button data-motion-choice="reduced">Redus</button></div></div>
-    <div class="section-title"><h3>Protecția sistemului</h3></div><div class="notice"><svg class="svg small"><use href="#i-lock"/></svg><span>Genesis 0.6.1 nu are încă autentificare. Ține portul 8080 accesibil doar local, prin QEMU. Setările vizuale nu schimbă configurația de securitate a NAS-ului.</span></div>
+    <div class="section-title"><h3>Protecția sistemului</h3></div><div class="notice"><svg class="svg small"><use href="#i-lock"/></svg><span>Package Center cere autentificare de administrator. API-urile NAS rămân read-only și locale. Administrarea LAN este dezactivată până la configurarea transportului securizat. Setările vizuale nu modifică securitatea sistemului.</span></div>
   </template>
   <template id="tpl-about">
     <div class="about-logo">Z</div><div class="mini-overline">ZIONOS GENESIS</div><h2 style="font-size:27px;margin:7px 0 9px;letter-spacing:-1px">Your space, in control.</h2><p style="max-width:440px;color:var(--muted);font-size:13px;line-height:1.7">Un sistem de operare NAS proiectat pentru a da o nouă viață hardware-ului tău. Această ediție este un prototip de monitorizare read-only.</p>
-    <div class="section-title"><h3>Informații sistem</h3></div><div class="panel sys-summary"><div class="sys-item"><span>Versiune shell</span><span>Genesis 0.6.1</span></div><div class="sys-item"><span>Zion Core</span><span data-bind="api-version">—</span></div><div class="sys-item"><span>Arhitectură</span><span data-bind="arch">—</span></div><div class="sys-item"><span>Kernel</span><span data-bind="kernel">—</span></div></div>
+    <div class="section-title"><h3>Informații sistem</h3></div><div class="panel sys-summary"><div class="sys-item"><span>Versiune shell</span><span>Genesis 0.7.0</span></div><div class="sys-item"><span>Zion Core</span><span data-bind="api-version">—</span></div><div class="sys-item"><span>Arhitectură</span><span data-bind="arch">—</span></div><div class="sys-item"><span>Kernel</span><span data-bind="kernel">—</span></div></div>
   </template>
   <script src="/desktop-app-registry.js" defer></script>
   <script src="/desktop-app-bridge.js" defer></script>
+  <script src="/package-center.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>

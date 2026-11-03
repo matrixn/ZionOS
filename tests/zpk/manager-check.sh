@@ -16,7 +16,7 @@ cargo clippy --locked --manifest-path crates/zpk-manager/Cargo.toml --all-target
 sh -n tests/zpk/manager-guest.sh
 python3 -m py_compile tests/zpk/manager-vm.py tests/zpk/manager-fixtures.py
 if [[ "${1:-}" == --vm ]]; then
-  test -s build/iso/zionos-genesis-0.6.1-x86_64.iso || { echo 'Build the Genesis ISO first' >&2; exit 1; }
+  test -s "$(sh "$ROOT/scripts/iso-path.sh")" || { echo 'Build the Genesis ISO first' >&2; exit 1; }
   # Docker is used ONLY by Forge to compile owned source examples, never to run installed applications.
   RUSTFLAGS='-C target-cpu=x86-64' CFLAGS_x86_64_unknown_linux_musl='-march=x86-64 -mtune=generic' cargo build --locked --manifest-path crates/zpk-manager/Cargo.toml --release --target x86_64-unknown-linux-musl
   RUSTFLAGS='-C target-cpu=x86-64' cargo build --locked --manifest-path crates/zpk-runtime/Cargo.toml --release --target x86_64-unknown-linux-musl --bin zpk-runtime

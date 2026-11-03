@@ -16,4 +16,5 @@ cp "$ROOT/web/desktop/index.html" "$ROOT/web/desktop/app.js" "$ROOT/build/stage/
 mkdir -p "$ROOT/build/stage/apps"
 cp "$ROOT/web/desktop/apps/registry.js" "$ROOT/web/desktop/apps/bridge.js" "$ROOT/build/stage/apps/"
 cp "$ROOT/platform/alpine/zion-core.initd" "$ROOT/build/stage/"
+cp "$ROOT/web/desktop/apps/package-center.js" "$ROOT/web/desktop/apps/package-center.css" "$ROOT/build/stage/apps/"
 printf 'Core checks/build/staging: %s seconds (Cargo cache: %s)\n' "$((SECONDS-build_started))" "$CARGO_TARGET_DIR"

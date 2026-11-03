@@ -58,11 +58,13 @@ class OverlaySafety(unittest.TestCase):
             directory = Path(directory)
             stage = directory / "stage"
             stage.mkdir()
-            for name in ("zion-core", "index.html", "app.js", "zion-core.initd"):
+            for name in ("zion-core", "index.html", "app.js", "zion-core.initd", "zion-platform", "zpk", "zpk-runtime"):
                 (stage / name).write_text("fixture\n")
             (stage / "apps").mkdir()
-            for name in ("registry.js", "bridge.js"):
+            for name in ("registry.js", "bridge.js", "package-center.js", "package-center.css"):
                 (stage / "apps" / name).write_text("fixture\n")
+            (stage / "catalog").mkdir()
+            (stage / "catalog" / "zion-hello-1.0.0.zpk").write_text("fixture\n")
             # The production builder mounts this repository at /workspace.
             # Relocate that single literal for an unprivileged local fixture.
             script = (ROOT / "platform/alpine/genapkovl-zionos.sh").read_text()

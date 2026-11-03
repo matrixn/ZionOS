@@ -1,21 +1,57 @@
-# ZionOS Genesis 0.6.1 — NAS experimental
+# ZionOS Genesis 0.7 — Native Package Center
 
 ZionOS este un sistem NAS live/diskless: Alpine Linux 3.23, kernel Alpine LTS,
 OpenRC, API Rust/Axum și desktop în browser. **Nu este pregătit pentru producție.**
-Configurația live nu persistă după reboot. API-ul nu are autentificare și trebuie
-folosit numai în QEMU izolat, prin forwarding local `127.0.0.1:8080`.
+Sistemul de bază rămâne live/diskless. Aplicațiile, contul administratorului și
+registrul persistă numai pe volumul ext4 configurat explicit prin UUID.
+Package Center are autentificare, sesiuni și CSRF; API-urile NAS rămân read-only.
+Administrarea este limitată la fluxul local/QEMU `127.0.0.1:8080`, fără acces LAN.
 
 **0.6.1 suspendă `zion-lab-provision --apply`.** Planul și diagnosticul rămân
 read-only; API-ul nu autorizează scrieri. Revalidarea shell din 0.6 nu elimina
 cursa dintre verificare și formatare. Un executor exclusiv verificat este cerință
-pentru 0.7. [Raportul 0.6.1](docs/GENESIS_061.md) descrie remedierile și limitele.
+înaintea oricărei activări viitoare. Genesis 0.7 păstrează această protecție.
+[Raportul 0.6.1](docs/GENESIS_061.md) descrie remedierile și limitele.
 
-## Checklist cumulativ: Genesis 0.1–0.6.1
+## Genesis 0.7 — Package Center funcțional
 
-Fundația control-plane pentru 0.7 este în `crates/zpk-control/`: autentificare
-Argon2id, sesiuni/CSRF, IPC Unix cu identitate verificată, adapter Manager și boot
-pe volum ext4 configurat prin UUID. Integrarea în ISO și interfața grafică sunt
-livrate separat; acest modul nu expune singur endpointuri HTTP sau un formatter.
+- [x] ISO cu Manager, Runtime, broker și catalog local `zion-hello` compilat prin Forge.
+- [x] Volum persistent selectat prin UUID, validat înaintea montării; mod degradat
+  explicit pentru volum absent/invalid sau registru corupt, fără instalare în RAM.
+- [x] Administrator creat prin bootstrap local, Argon2id, sesiuni persistente,
+  expirare/logout, Origin/Host, CSRF și autorizare verificată independent în broker.
+- [x] Core dedicat neprivilegiat; broker root cu IPC Unix versionat, peer credentials,
+  descriptori read-only, acțiuni limitate și jurnal/audit; fără shell arbitrar.
+- [x] Discover, Installed, căutare/filtrare, upload real limitat, preview și acord
+  explicit pentru permisiuni și încredere locală în arhive nesemnate.
+- [x] Install, Start, Stop, Restart, status/loguri, upgrade, rollback executabil și
+  uninstall cu păstrarea datelor; progres din fazele reale Manager/OpenRC.
+- [x] Launcher actualizat fără reload, icon/window/SDK, teme și notificări;
+  revocarea assets după upgrade/uninstall, fără icon fictiv pentru servicii fără UI.
+- [x] Teste reale browser/QEMU pentru reboot, upgrade eșuat, întreruperea tranzacției,
+  refuz auth/CSRF/IPC, arhive malițioase și spațiu insuficient.
+- [ ] Administrare LAN/HTTPS, cookie Secure și configurare proxy de producție.
+- [ ] Semnături/catalog remote, RBAC/MFA/reset parolă, cote agregate și purge date.
+- [ ] Broker general pentru fișiere/settings SDK; acestea rămân `UNAVAILABLE`.
+
+```sh
+cd /mnt/c/Users/radut/Workspace/zionos
+bash scripts/build-iso.sh
+bash scripts/run-qemu-package-center.sh
+# Repornește exact mediul păstrat de prima comandă:
+bash scripts/run-qemu-package-center.sh --resume build/center-XXXXXX
+```
+
+Deschide **http://127.0.0.1:8080 → Package Center**. Codul inițial este în fișierul
+privat `setup-code.txt` din directorul afișat; alegi parola, nu există una implicită.
+Comanda `quit` oprește VM-ul curat. Nu rula simultan alt server/VM pe portul 8080.
+Fără `--resume` se creează alt mediu gol; nu se formatează un disc existent.
+
+[Ghid complet și comenzi](docs/GENESIS_07.md) ·
+[Arhitectură și limite de securitate](docs/GENESIS_07_ARCHITECTURE.md) ·
+[Rezultate executate și capturi reale](docs/GENESIS_07_VERIFICATION.md).
+
+## Checklist cumulativ: Genesis 0.1–0.7
 
 
 Istoricul a fost reconciliat cu conversația inițială „Utilitatea unui OS multiplatformă”
@@ -26,7 +62,7 @@ separat. Nu presupune că toate scenariile hardware au fost validate.
 
 - [x] Profil ISO Alpine 3.23 pentru x86-64 și kernel LTS furnizat de Alpine.
 - [x] OpenRC: `sysinit`, `boot`, `default`, shutdown; `eth0` cu DHCP și loopback.
-- [x] Serviciu `zion-core` executat ca `nobody:nobody` și `GET /api/health`.
+- [x] Serviciu `zion-core` neprivilegiat și `GET /api/health` (cont dedicat din 0.7).
 - [x] Staging Rust musl, build ISO Docker și launcher QEMU.
 - [x] API local implicit; acces guest numai prin contractul explicit QEMU izolat.
 
@@ -150,7 +186,8 @@ Detalii, mod verbose, loguri și limite: [Consola de boot](docs/BOOT_CONSOLE.md)
 - [ ] Instalare, repository, semnături, sandbox și integrare în desktop/ISO: neimplementate.
 
 **Hash-urile nu autentifică editorii. ZPK nesemnat este numai pentru dezvoltare locală de încredere.**
-Genesis 0.6.1 și comenzile sale rămân neschimbate; ZPK nu este inclus în ISO.
+La TASK 00 ZPK nu era inclus în ISO. Integrarea reală în ISO și Package Center
+este livrată în Genesis 0.7; comenzile istorice de validare rămân compatibile.
 Nu introducem încă workspace Cargo la rădăcină: păstrăm lockfile-ul și build-ul Core,
 iar noul crate are lockfile propriu. Detalii: [documentația ZPK](docs/zpk/README.md),
 [format v1](docs/zpk/FORMAT_V1.md), [verificări](docs/zpk/VERIFICATION.md).
@@ -272,7 +309,8 @@ bash scripts/run-qemu.sh
   rularea obișnuită fără argumente rămâne print-and-exit.
 - [x] Teste de instalator cu servicii mock, 46 de întreruperi reale de proces și test QEMU
   cu trei boot-uri pe același QCOW2 dedicat, inclusiv reinstalare în ordine inversă.
-- [ ] Catalog semnat, broker/UI autentificat, migrări de date, ștergerea datelor,
+- [x] Broker/UI autentificat și catalog local în Genesis 0.7.
+- [ ] Catalog semnat, migrări de date, ștergerea datelor,
   activări multi-pachet și garanții la pierderea alimentării: neimplementate/nevalidate.
 
 Nu există endpoint-uri HTTP de instalare, instalare pe hostul Windows/WSL sau runtime Docker.
@@ -300,7 +338,8 @@ bash tests/zpk/manager-check.sh --vm
 - [x] 13 teste unitare cu OpenRC mock și integrare nativă QEMU: lifecycle, crash budget,
   CPU/memorie/FD/procese/fișiere, sănătate Unix, logs, autostart și date păstrate la restart.
 - [x] `zpk-common` partajează acum inspecția ELF între Forge și Runtime, fără Docker în runtime.
-- [ ] Broker autentificat, activare UI din desktop, cgroup-uri agregate, cote filesystem,
+- [x] Broker autentificat și activare UI din desktop în Genesis 0.7.
+- [ ] Cgroup-uri agregate, cote filesystem,
   instalare/upgrade și persistență după reboot: neimplementate/nevalidate în acest task.
 
 Aplicațiile rulează ca procese Linux native: **fără Docker/OCI/Kubernetes la runtime**.
@@ -341,11 +380,13 @@ ISO, manifest, QCOW2 și loguri rămân în `build/`, ignorate de Git. Pachetele
 încă furnizate din repository mobil: pinning-ul builder/aports nu face build-ul
 reproductibil byte-for-byte și manifestul nu este un SBOM complet al sistemului live.
 
-Măsurat local: prima populare a cache-ului ISO **280s**, rebuild cu cache **21–25s**,
+Măsurători istorice 0.6.1: prima populare a cache-ului ISO **280s**, rebuild cu cache **21–25s**,
 cu aceeași imagine de aproximativ **352 MiB**, fără eliminarea firmware-ului/modulelor.
 Boot și smoke: **36s KVM**, **159s TCG/Conroe**. Prima încercare TCG a avut un
 kernel panic timpuriu; reluarea aceleiași imagini a trecut. Cauza rămâne de investigat,
 vezi raportul 0.6.1; compatibilitatea pe hardware fizic nu este certificată.
+Pentru ISO-ul 0.7 cu Forge/catalog/helper-e, măsurarea cached este aproximativ 79s
+și 358 MiB; [raportul curent](docs/GENESIS_07_VERIFICATION.md) separă rezultatele.
 
 ## Rulare și verificare ISO
 
@@ -403,7 +444,7 @@ Diagnosticul `zion-lab-recover --check` refuză discul lab gol: cere ext4 confir
 Nu rula mai multe VM-uri simultan. QCOW2-urile lab sunt păstrate în `build/disks/lab.*`
 pentru inspecție și nu sunt refolosite automat.
 
-## Rezultate și roadmap
+## Rezultate și roadmap — istoricul auditului 0.6.1
 
 - [x] Rust: 33 teste, rustfmt și Clippy cu `-D warnings`.
 - [x] 16 teste de siguranță/consolă/cache pe fixture-uri, fără dispozitive bloc.
@@ -413,13 +454,14 @@ pentru inspecție și nu sunt refolosite automat.
 - [x] Build final ISO și verificarea `/init` din imaginea produsă.
 - [x] QEMU implicit și cu CPU `Conroe`: branding timpuriu, OpenRC, DHCP, API/assets și refuz POST.
 - [x] Scaffold Vue: `npm run build` trece în WSL; avertisment pentru scriptul static nebundlat.
-- [ ] Validare vizuală interactivă a desktopului și teste pe hardware fizic.
+- [x] Validare browser real dark/light/mobil în Genesis 0.7, raportată separat mai sus.
+- [ ] Teste pe hardware fizic.
 - [ ] Teste distructive CLI, repair/rollback, RAID1 real: neexecutate.
 
 **0.6.1:** guard comun, apply suspendat, izolarea API, bugete/cache și build/KVM mai rapide.
-**0.7 P1:** planuri Rust Single/RAID1, executor exclusiv cu identitate fixată și dovezi
+**Storage ulterior, separat de Package Center 0.7:** planuri Rust Single/RAID1, executor exclusiv cu identitate fixată și dovezi
 de recuperare; **P2:** fault injection, rezultate recovery exportabile, wizard și
-snapshot-uri APK/SBOM. Web rămâne read-only. [Criterii și limite](docs/GENESIS_061.md).
+snapshot-uri APK/SBOM. API-ul storage rămâne read-only. [Criterii și limite](docs/GENESIS_061.md).
 
 [Audit, fișiere modificate, riscuri și criterii de acceptare](docs/AUDIT_GENESIS_06.md).
 

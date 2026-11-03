@@ -44,7 +44,7 @@ def boot(folder, disk, phase, legacy=False, interactive=False):
         probe.bind(('127.0.0.1', 8080))
     accel, cpu = acceleration(legacy)
     command = ['qemu-system-x86_64', '-accel', accel, '-cpu', cpu, '-m', '2048', '-smp', '2',
-               '-cdrom', str(ROOT / 'build/iso/zionos-genesis-0.6.1-x86_64.iso'),
+               '-cdrom', str(Path(subprocess.check_output(["sh",str(ROOT/"scripts/iso-path.sh")],text=True).strip())),
                '-drive', f'file={folder}/fixtures.iso,media=cdrom,readonly=on,index=3',
                '-drive', f'file={disk},if=none,id=e2e-disk,format=qcow2,cache=none',
                '-device', 'virtio-blk-pci,drive=e2e-disk,serial=ZPKE2ETEST01',

@@ -1,0 +1,33 @@
+name: Genesis 0.7 real Package Center VM
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  authenticated-native-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Development and disposable VM tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools qemu-system-x86 qemu-utils xorriso e2fsprogs
+          npm --prefix web/zion-app-sdk ci --ignore-scripts --no-audit --no-fund
+          cd web/zion-app-sdk
+          npx playwright install --with-deps chromium
+      - name: Build real ISO including native helpers and Forge-built local catalog
+        run: bash scripts/build-iso.sh
+      - name: Existing Genesis smoke and safety guards
+        run: |
+          bash tests/check-safety.sh
+          bash scripts/test-vm.sh
+      - name: Actual authenticated graphical native lifecycle and degraded boots
+        run: bash tests/package-center/check.sh --vm

@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+name="ZionOS persistent applications"
+description="Validate and mount only the explicitly configured preformatted application UUID"
+depend() { need localmount; after modloop hwdrivers; before zion-package-broker zion-core; }
+start() {
+    ebegin "Checking configured ZionOS application volume (no formatting)"
+    /opt/zionos/bin/zion-platform volume
+    eend $?
+}

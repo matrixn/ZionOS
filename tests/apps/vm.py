@@ -28,7 +28,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='sdk-vm-',dir=ROOT/'build') as temporary:
         disk=helper.create_image(temporary)
         command=['qemu-system-x86_64','-accel',accel,'-cpu','host' if accel=='kvm' else 'qemu64','-m','2048','-smp','2',
-                 '-cdrom',str(ROOT/'build/iso/zionos-genesis-0.6.1-x86_64.iso'),'-drive',f'file={media},media=cdrom,readonly=on,index=3',
+                 '-cdrom',str(Path(subprocess.check_output(["sh",str(ROOT/"scripts/iso-path.sh")],text=True).strip())),'-drive',f'file={media},media=cdrom,readonly=on,index=3',
                  '-drive',f'file={disk},if=none,id=sdk-test-disk,format=qcow2,cache=none','-device','virtio-blk-pci,drive=sdk-test-disk,serial=ZPKSDKTEST01',
                  '-nic','user,model=e1000,hostfwd=tcp:127.0.0.1:8080-:8080','-fw_cfg','name=opt/zionos/network,string=QEMU-USERNET-LOCALHOST-V1',
                  '-boot','d','-serial','mon:stdio','-display','none','-no-reboot']

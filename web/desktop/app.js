@@ -1,6 +1,7 @@
 'use strict';
-/* ZionOS Shell Genesis 0.6. No external assets, runtime dependencies or privileged APIs. */
+/* ZionOS Shell Genesis 0.7. Read-only NAS APIs; authenticated package operations use the local broker. */
 const BUILTIN_APPS = [
+  { id: 'packages', title: 'Package Center', short: 'Packages', icon: 'package', tile: 'tile-settings', subtitle: 'Native applications · authenticated', dock: true },
   { id: 'overview', title: 'System Overview', short: 'Overview', icon: 'grid', tile: 'tile-activity', subtitle: 'Hardware & performance', dock: true },
   { id: 'files', title: 'File Station', short: 'Files', icon: 'folder', tile: 'tile-files', subtitle: 'File explorer · preview', dock: true },
   { id: 'storage', title: 'Storage Manager', short: 'Storage', icon: 'hard-drive', tile: 'tile-storage', subtitle: 'Devices & volumes', dock: true },
@@ -201,7 +202,8 @@ function createWindow(app,key=app.id) {
     appBridge.attach(frame,app,key);frame.src=app.entryURL;win.querySelector('.window-body').append(frame);
     frame.addEventListener('focus',()=>focusWindow(win));
     if(app.multipleInstances){const button=document.createElement('button');button.type='button';button.className='win-control';button.textContent='+';button.title='Fereastră nouă';button.setAttribute('aria-label','Fereastră nouă');button.addEventListener('click',()=>openApp(app.id,{newInstance:true}));win.querySelector('.window-controls').prepend(button);}
-  }else{const template = byId(`tpl-${app.id}`);win.querySelector('.window-body').appendChild(template.content.cloneNode(true));}
+  }else if(app.id==='packages'){ZionPackageCenter.mount(win.querySelector('.window-body'),{toast,openApp,refresh:pollApps});}
+  else{const template = byId(`tpl-${app.id}`);win.querySelector('.window-body').appendChild(template.content.cloneNode(true));}
   win.addEventListener('pointerdown', () => focusWindow(win));
   win.querySelectorAll('[data-window-action]').forEach((button) => button.addEventListener('click', (e) => {
     e.stopPropagation();

@@ -1,5 +1,12 @@
 # Audit Genesis 0.6 și roadmap
 
+Actualizare Genesis 0.7: milestone-ul curent livrează Package Center nativ,
+autentificare locală și broker Unix, nu executorul storage propus inițial mai jos.
+[Arhitectură](GENESIS_07_ARCHITECTURE.md), [ghid](GENESIS_07.md) și
+[verificări executate](GENESIS_07_VERIFICATION.md). API-urile NAS rămân read-only,
+`--apply` rămâne dezactivat; provisioning-ul sigur este un milestone viitor separat.
+TLS/LAN, brokerul general pentru aplicații și distribuția autentificată rămân deschise.
+
 Acesta este raportul istoric 0.6. Pentru starea curentă, remedierile riscurilor
 de mai jos și verificările noi, vezi [Genesis 0.6.1](GENESIS_061.md).
 

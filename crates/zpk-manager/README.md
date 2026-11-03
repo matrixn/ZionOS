@@ -6,7 +6,10 @@ tests three boots, upgrades and interrupted activation. The additional `zpk-e2e-
 binary is a guarded trusted development fixture, not a production command/helper.
 
 Local native package transactions and Alpine/OpenRC privileged adapter. No HTTP
-installer, runtime containers or package-provided privileged scripts.
+server, runtime containers or package-provided privileged scripts in this crate.
+Genesis 0.7 reuses this library behind the restricted authenticated Unix broker;
+the HTTP process remains non-root. See [Package Center](../../docs/GENESIS_07.md)
+and its [authorization contract](../../docs/GENESIS_07_ARCHITECTURE.md).
 
 Architecture, exact commands, persistent-volume prerequisites and supported limits:
 [manager guide](../../docs/zpk/MANAGER.md).

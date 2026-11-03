@@ -24,11 +24,11 @@ APK
 # Keep Alpine package identity in /etc/os-release for compatibility.
 # User-facing login branding is independent of the underlying package manager.
 cat > "$tmp/etc/zionos-release" <<'RELEASE'
-ZionOS Genesis 0.6.1 (AL 3.23; Linux LTS)
+ZionOS Genesis 0.7.0 (AL 3.23; Linux LTS)
 RELEASE
 printf 'ZIONOS-LAB-0.6.1\n' > "$tmp/etc/zionos-lab"
-printf 'Zion OS Genesis 0.6.1 (AL 3.23)\n\n' > "$tmp/etc/issue"
-printf '\033[1;36mZION OS\033[0m  \033[1mGenesis 0.6.1\033[0m (AL 3.23 / Linux LTS)\n' > "$tmp/etc/motd"
+printf 'Zion OS Genesis 0.7.0 (AL 3.23)\n\n' > "$tmp/etc/issue"
+printf '\033[1;36mZION OS\033[0m  \033[1mGenesis 0.7.0\033[0m (AL 3.23 / Linux LTS)\n' > "$tmp/etc/motd"
 cat >> "$tmp/etc/motd" <<'MOTD'
 NAS Development Edition — Provisioning & Recovery Lab
 Web: http://<NAS-IP>:8080  |  Backend: Alpine Linux 3.23
@@ -50,6 +50,20 @@ cp "$ZION_STAGE/index.html" "$tmp/opt/zionos/web/index.html"
 cp "$ZION_STAGE/app.js" "$tmp/opt/zionos/web/app.js"
 mkdir -p "$tmp/opt/zionos/web/apps"
 cp "$ZION_STAGE/apps/registry.js" "$ZION_STAGE/apps/bridge.js" "$tmp/opt/zionos/web/apps/"
+cp "$ZION_STAGE/apps/package-center.js" "$ZION_STAGE/apps/package-center.css" "$tmp/opt/zionos/web/apps/"
+cp "$ZION_STAGE/zion-platform" "$tmp/opt/zionos/bin/zion-platform"
+mkdir -p "$tmp/opt/zionos/catalog"
+cp "$ZION_STAGE/catalog/zion-hello-1.0.0.zpk" "$tmp/opt/zionos/catalog/"
+cp "$ZION_STAGE/zpk" "$tmp/usr/local/sbin/zpk"
+mkdir -p "$tmp/usr/local/libexec"
+cp "$ZION_STAGE/zpk-runtime" "$tmp/usr/local/libexec/zpk-runtime"
+chmod 755 "$tmp/opt/zionos/bin/zion-platform" "$tmp/usr/local/sbin/zpk" "$tmp/usr/local/libexec/zpk-runtime"
+for service in zion-app-volume zion-package-broker; do
+    cp "/workspace/platform/alpine/$service.initd" "$tmp/etc/init.d/$service"
+    chmod 755 "$tmp/etc/init.d/$service"
+done
+ln -sf /etc/init.d/zion-app-volume "$tmp/etc/runlevels/boot/zion-app-volume"
+ln -sf /etc/init.d/zion-package-broker "$tmp/etc/runlevels/default/zion-package-broker"
 cp "$ZION_STAGE/zion-core.initd" "$tmp/etc/init.d/zion-core"
 chmod 755 "$tmp/opt/zionos/bin/zion-core" "$tmp/etc/init.d/zion-core"
 ln -s /etc/init.d/zion-core "$tmp/etc/runlevels/default/zion-core"

@@ -2,6 +2,7 @@ mod access;
 mod apps;
 mod cache;
 mod lab;
+mod packages;
 mod pools;
 mod provisioning;
 mod storage;
@@ -229,7 +230,15 @@ async fn provisioning_info() -> Json<provisioning::LabSnapshot> {
 }
 
 async fn index() -> Response {
-    serve_asset("index.html", "text/html; charset=utf-8")
+    let mut response = serve_asset("index.html", "text/html; charset=utf-8");
+    response.headers_mut().insert(header::CONTENT_SECURITY_POLICY,"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'none'".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::X_FRAME_OPTIONS, "DENY".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::REFERRER_POLICY, "no-referrer".parse().unwrap());
+    response
 }
 
 async fn app_js() -> Response {
@@ -241,6 +250,15 @@ async fn app_bridge_js() -> Response {
 async fn app_registry_js() -> Response {
     serve_asset("apps/registry.js", "application/javascript; charset=utf-8")
 }
+async fn package_center_js() -> Response {
+    serve_asset(
+        "apps/package-center.js",
+        "application/javascript; charset=utf-8",
+    )
+}
+async fn package_center_css() -> Response {
+    serve_asset("apps/package-center.css", "text/css; charset=utf-8")
+}
 
 #[cfg(test)]
 fn router(policy: access::Policy) -> Router {
@@ -248,8 +266,11 @@ fn router(policy: access::Policy) -> Router {
 }
 fn router_with_apps(policy: access::Policy, store: apps::Store) -> Router {
     Router::new()
+        .merge(packages::router())
         .route("/", get(index))
         .route("/app.js", get(app_js))
+        .route("/package-center.js", get(package_center_js))
+        .route("/package-center.css", get(package_center_css))
         .route("/desktop-app-registry.js", get(app_registry_js))
         .route("/desktop-app-bridge.js", get(app_bridge_js))
         .route("/api/apps", get(apps::list))

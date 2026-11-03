@@ -1,4 +1,4 @@
-//! Network isolation for the unauthenticated, read-only prototype.
+//! Local/QEMU network boundary. NAS monitoring is read-only; Package Center adds its own auth/CSRF gates.
 use axum::{
     extract::{ConnectInfo, Request, State},
     http::StatusCode,

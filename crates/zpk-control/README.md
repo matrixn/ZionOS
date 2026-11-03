@@ -24,3 +24,10 @@ cargo clippy --locked --manifest-path crates/zpk-control/Cargo.toml --all-target
 Library unit tests use owned temporary files, socket pairs and a metadata-only work
 closure. They do not mount devices, create service users or execute application code.
 Native integration is tested separately in disposable QEMU only.
+
+The production ISO includes this adapter, Manager/Runtime and the authenticated
+Core/desktop facade. Start with the [developer guide](../../docs/GENESIS_07.md),
+[architecture/security contract](../../docs/GENESIS_07_ARCHITECTURE.md) and
+[executed tests](../../docs/GENESIS_07_VERIFICATION.md).
+`bash tests/package-center/check.sh --vm` tests the real graphical native workflow;
+`bash scripts/run-qemu-package-center.sh` exposes the same desktop interactively.

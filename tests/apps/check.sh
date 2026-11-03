@@ -27,7 +27,7 @@ if [[ -n "${1:-}" ]]; then
   cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge package --project examples/zion-hello --output "$ZION_SDK_PACKAGE"
   node tests/apps/browser.cjs
   if [[ "$1" == --vm ]]; then
-    test -s build/iso/zionos-genesis-0.6.1-x86_64.iso || { echo 'Build the final Genesis ISO first: bash scripts/build-iso.sh' >&2; exit 1; }
+    test -s "$(sh "$ROOT/scripts/iso-path.sh")" || { echo 'Build the final Genesis ISO first: bash scripts/build-iso.sh' >&2; exit 1; }
     export RUSTFLAGS='-C target-cpu=x86-64'
     export CFLAGS_x86_64_unknown_linux_musl='-march=x86-64 -mtune=generic'
     cargo build --locked --manifest-path crates/zpk-manager/Cargo.toml --release --target x86_64-unknown-linux-musl --bin zpk

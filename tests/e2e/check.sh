@@ -21,7 +21,7 @@ folder="$(mktemp -d "$ROOT/build/e2e-XXXXXX")"
 printf 'E2E evidence directory: %s\n' "$folder"
 python3 tests/e2e/fixtures.py "$folder"
 if [[ "$1" == --packages ]]; then exit 0; fi
-test -s build/iso/zionos-genesis-0.6.1-x86_64.iso || { echo 'Build the final Genesis ISO first' >&2; exit 1; }
+test -s "$(sh "$ROOT/scripts/iso-path.sh")" || { echo 'Build the final Genesis ISO first' >&2; exit 1; }
 export RUSTFLAGS='-C target-cpu=x86-64'
 export CFLAGS_x86_64_unknown_linux_musl='-march=x86-64 -mtune=generic'
 cargo build --locked --manifest-path crates/zpk-manager/Cargo.toml --release --target x86_64-unknown-linux-musl --bin zpk --bin zpk-e2e-guest

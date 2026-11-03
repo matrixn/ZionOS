@@ -12,7 +12,7 @@ def boot(disk,phase):
     accel=os.environ.get('ZPK_MANAGER_ACCEL','kvm' if kvm else 'tcg')
     if accel not in ('kvm','tcg'): raise ValueError('ZPK_MANAGER_ACCEL must be kvm or tcg')
     command=['qemu-system-x86_64','-accel',accel,'-cpu','host' if accel=='kvm' else 'qemu64','-m','2048','-smp','2',
-             '-cdrom',str(ROOT/'build/iso/zionos-genesis-0.6.1-x86_64.iso'),
+             '-cdrom',str(Path(subprocess.check_output(["sh",str(ROOT/"scripts/iso-path.sh")],text=True).strip())),
              '-drive',f'file={ROOT}/build/manager-fixtures.iso,media=cdrom,readonly=on,index=3',
              '-drive',f'file={disk},if=none,id=zpk-test-disk,format=qcow2,cache=none',
              '-device','virtio-blk-pci,drive=zpk-test-disk,serial=ZPKMGRTEST01',

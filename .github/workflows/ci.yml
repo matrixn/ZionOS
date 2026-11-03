@@ -2,13 +2,22 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk, feat/zpk-e2e-integration]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk, feat/zpk-e2e-integration, feat/genesis-07-package-center]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  package-control:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Auth/IPC/concurrency guards and frontend syntax (no native host installs)
+        run: bash tests/package-center/check.sh
   sdk:
     runs-on: ubuntu-latest
     timeout-minutes: 25

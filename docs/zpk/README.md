@@ -1,5 +1,12 @@
 # Zion Package Format — v1 foundation
 
+Genesis 0.7 integrates the existing components into the actual ISO and an
+[authenticated graphical Package Center](../GENESIS_07.md), using persistent
+UUID-selected storage and a constrained root Unix broker. NAS APIs remain read-only;
+the package broker does not implement general SDK file/settings capabilities.
+The sections below describe each component's original scope, not a replacement
+for the current [architecture/security limits](../GENESIS_07_ARCHITECTURE.md).
+
 For the integrated Source → Forge → Manager → OpenRC → Desktop → upgrade/uninstall
 journey and persistent QEMU environment, start with [TASK 05](E2E.md). It reuses
 these components and leaves HTTP read-only. Native persistent settings do not enable
@@ -8,7 +15,8 @@ the unavailable browser settings API. [Executed results](E2E_VERIFICATION.md).
 ZPK is an independently designed, native Linux application archive. This foundation
 defines declarations and offline inspection only. It does not install applications,
 start services, grant permissions, modify storage, or extend the HTTP API. No Docker
-images or container runtime are part of ZPK. Genesis remains at 0.6.1.
+images or container runtime are part of ZPK. The schema remains compatible with
+the original Genesis 0.6.1 examples.
 
 [ZPK Forge (TASK 01)](FORGE.md) adds isolated source builds and offline native packaging.
 Docker is used only for development builds/tests, not by produced applications at runtime.
@@ -27,7 +35,7 @@ target filesystems and explicit trusted-local development policy are mandatory.
 read-only discovery/asset routes, shared desktop windows and an opaque-iframe SDK.
 The [native Zion Hello example](../../examples/zion-hello/README.md) is tested in
 Alpine/QEMU. Files/settings and an authenticated native permission broker remain
-unavailable; the current Core API still has no authentication or write routes.
+unavailable; authenticated package write routes are added separately in Genesis 0.7.
 
 **Unsigned ZPK files are limited to trusted local development. SHA-256 detects
 corruption and inventory changes; it does not authenticate publishers. An attacker

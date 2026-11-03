@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+name="ZionOS package broker"
+description="Authenticated local Unix package operations; no network listener"
+command="/opt/zionos/bin/zion-platform"
+command_args="serve"
+command_background="yes"
+pidfile="/run/zion-package-broker.pid"
+output_log="/var/log/zion-package-broker.log"
+error_log="/var/log/zion-package-broker.err"
+depend() { need net zion-app-volume; before zion-core; after firewall; }
+start() {
+    if ! test -f /run/zionos/platform-ready; then
+        ewarn "Package Center degraded: no valid persistent application volume"
+        return 0
+    fi
+    if ! /opt/zionos/bin/zion-platform restore; then
+        ewarn "Package Center degraded: registry/service recovery requires local diagnostics"
+        return 0
+    fi
+    checkpath -f -m 0600 -o root:root "$output_log" "$error_log"
+    default_start
+}

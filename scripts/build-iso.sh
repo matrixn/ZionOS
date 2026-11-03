@@ -8,6 +8,7 @@ exec 9>build/.iso-build.lock
 flock -n 9 || { echo 'Another ISO build owns this workspace' >&2; exit 1; }
 build_started=$SECONDS
 bash scripts/build-core.sh
+bash scripts/build-package-platform.sh
 BUILDER=zionos-builder:0.6.1
 docker build -t "$BUILDER" - < platform/alpine/Dockerfile.builder
 builder_id="$(docker image inspect "$BUILDER" --format '{{.Id}}')"

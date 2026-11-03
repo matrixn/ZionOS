@@ -145,6 +145,17 @@ pub fn identity() -> Result<(u32, u32)> {
         }
         let uid = (*p).pw_uid;
         let gid = (*p).pw_gid;
+        let shadow = libc::getspnam(name.as_ptr());
+        if shadow.is_null()
+            || !matches!(
+                std::ffi::CStr::from_ptr((*shadow).sp_pwdp)
+                    .to_bytes()
+                    .first(),
+                Some(b'!' | b'*')
+            )
+        {
+            return fail("Core service account must be password-locked");
+        }
         let shell = std::ffi::CStr::from_ptr((*p).pw_shell).to_str()?;
         if shell != "/sbin/nologin" {
             return fail("Core must have a nologin identity");
