@@ -12,7 +12,9 @@ bash scripts/run-qemu-package-center.sh --resume build/center-XXXXXX
 ```
 
 Default checks run Rust auth/IPC/serialization tests, strict Clippy, frontend syntax
-and mocked fresh-image safety tests. They do not create service accounts or run a
+and fresh-image/resume safety tests. Four additional resume tests reject unknown
+environment/UUID, changed image identity, symlinks and hardlinks before tools run.
+They do not create service accounts or run a
 privileged package installer/native app on the developer host. The `vm-tests` Cargo
 feature only builds the separate guarded `guest.rs` fixture; it is not shipped in
 the production ISO or enabled in the broker.

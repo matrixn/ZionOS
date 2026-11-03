@@ -12,6 +12,7 @@ cargo clippy --locked --manifest-path crates/zpk-control/Cargo.toml --all-target
 node --check web/desktop/apps/package-center.js
 node --check tests/package-center/browser.cjs
 python3 tests/e2e/images_test.py
+python3 tests/package-center/images_test.py
 python3 -m py_compile tests/package-center/*.py
 if [[ -z "${1:-}" ]]; then exit 0; fi
 exec 9>build/.center-test.lock

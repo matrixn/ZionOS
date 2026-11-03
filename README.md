@@ -30,6 +30,9 @@ cursa dintre verificare și formatare. Un executor exclusiv verificat este cerin
   revocarea assets după upgrade/uninstall, fără icon fictiv pentru servicii fără UI.
 - [x] Teste reale browser/QEMU pentru reboot, upgrade eșuat, întreruperea tranzacției,
   refuz auth/CSRF/IPC, arhive malițioase și spațiu insuficient.
+- [x] Runner interactiv verificat pe TCG/Conroe; `--resume` păstrează contul și aplicația.
+- [x] Opt teste pentru crearea sigură a imaginilor/refuzuri resume; șapte joburi CI
+  trecute pentru integrarea `c6499d5`, raportate separat de workflow-ul VM manual.
 - [ ] Administrare LAN/HTTPS, cookie Secure și configurare proxy de producție.
 - [ ] Semnături/catalog remote, RBAC/MFA/reset parolă, cote agregate și purge date.
 - [ ] Broker general pentru fișiere/settings SDK; acestea rămân `UNAVAILABLE`.

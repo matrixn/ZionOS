@@ -46,10 +46,12 @@ Strict IPC rejects unknown authorization claims, including status requests.
 | Original SDK native VM regression | Real Forge service/OpenRC/browser and uninstall revocation passed on the 0.7 ISO |
 | Shell safety | 16 guard/overlay/cache/console tests passed, no physical devices |
 | Image helper guards | 4 tests passed, no actual host block device operations |
+| Resume refusal guards | 4 additional tests passed; invalid metadata/identity/links refused before QEMU/image tools |
 | Existing E2E source checks | Image/SDK checks plus 2 native hello settings tests and strict Clippy passed |
 | ISO build | Release musl/baseline helpers, actual Forge catalog and final ISO passed; ~358 MiB |
 | Original QEMU smoke | Boot/initramfs loader/OpenRC/DHCP/health/metrics/read-only NAS/assets passed (~44 seconds with KVM) |
 | Package Center QEMU | Actual authenticated graphical lifecycle and six clean boots passed |
+| Interactive runner and resume | Actual GUI install/lifecycle on TCG/Conroe, clean quit, same-disk resume with retained account/app and clean quit passed |
 
 Detailed local logs live in ignored `build/genesis07-{schema,forge,runtime,manager,
 sdk-browser,control-final,iso-final,smoke,sdk-vm,safety}.log`. Build time depends on
@@ -58,6 +60,19 @@ These are local observations, not timing guarantees.
 All Bash/OpenRC/active JavaScript syntax checks and workflow YAML parsing passed.
 Core's lockfile preserves all 101 original external dependency versions/checksums
 from inspected main; it adds 30 locked packages for the new control facade.
+
+The interactive/legacy check used `build/center-DG3IKP/`:
+`ZION_CENTER_LEGACY=1` forced TCG/Conroe for setup, actual native installation,
+browser/SDK and lifecycle actions. The wrapper then shut down cleanly and
+`--resume` reused the identity-checked persistent disk under KVM. A fresh browser
+login observed the retained account, installed version, autostart and working app
+window. Evidence: `build/genesis07-interactive-verified.log` and that directory's
+`interactive-{first,resume}.log`. This tests the interactive commands, not just the
+automated multi-boot driver. No physical CPU certification is implied.
+
+All seven source CI jobs passed for integration commit `c6499d5`:
+[GitHub Actions run 41623388318](https://github.com/matrixn/ZionOS/actions/runs/41623388318).
+The separate manual ISO/QEMU workflow was not dispatched remotely.
 
 ## Actual Package Center VM behavior
 
