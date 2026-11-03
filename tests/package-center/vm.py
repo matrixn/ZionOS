@@ -84,13 +84,10 @@ def boot(folder,phase,interactive=False,resume=False,missing=False,degraded=Fals
                     print('PASS production degraded boot: '+phase+', no RAM fallback, monitoring remains healthy',flush=True)
                     send('sync; poweroff');stage='shutdown';continue
                 if not current.get('available'):raise RuntimeError('production persistent platform unavailable: '+str(current.get('detail')))
-                if not current.get('configured'):
-                    send('cp /mnt/zion-center-fixtures/setup-token /run/zionos/setup-token; chmod 600 /run/zionos/setup-token; /opt/zionos/bin/zion-platform bootstrap-file /run/zionos/setup-token; echo ZION_CENTER_BOOTSTRAP_DONE');stage='bootstrap'
-                else:stage='browser'
-            elif stage=='bootstrap' and b'\nZION_CENTER_BOOTSTRAP_DONE\r\n' in log:stage='browser'
+                stage='browser'
             if stage=='browser':
                 if interactive:
-                    print(f'Genesis 0.7 ready: http://127.0.0.1:8080 — open Package Center. One-time setup code is in {folder}/setup-code.txt (private file).',flush=True)
+                    print('Genesis 0.7 ready: http://127.0.0.1:8080 — sign in to ZionOS. On a new volume, choose your username and password. No setup code or separate Package Center login.',flush=True)
                     print('Enter quit or Ctrl+C to shut down cleanly. Resume this same disk with: bash scripts/run-qemu-package-center.sh --resume '+str(folder),flush=True)
                     sel.register(sys.stdin,selectors.EVENT_READ)
                     while True:
@@ -152,11 +149,11 @@ def main():
     if mode=='--resume':boot(folder,'interactive-resume',interactive=True,resume=True);return
     if mode not in ('--vm','--interactive'):raise ValueError('unsupported VM mode')
     # Credentials are fresh per disposable VM; never print, put in argv, or commit them.
-    values={'code':secrets.token_hex(32),'password':secrets.token_hex(24)}
-    for name,body in [('credentials.json',json.dumps(values)),('setup-code.txt',values['code'])]:
+    values={'username':'owner','password':secrets.token_hex(24)}
+    for name,body in [('credentials.json',json.dumps(values))]:
         path=folder/name
         with path.open('x') as f:os.fchmod(f.fileno(),0o600);f.write(body)
-    media=folder/'media';(media/'setup-token').write_text(values['code']);(media/'setup-token').chmod(0o600)
+    media=folder/'media'
     (media/'low-space.json').write_text(json.dumps({'max_upload':67108864,'reserve_bytes':1073741824}))
     release=Path(os.environ['CARGO_TARGET_DIR'])/'x86_64-unknown-linux-musl/release'
     shutil.copyfile(release/'zion-center-guest',media/'guest-check');(media/'guest-check').chmod(0o755)

@@ -41,12 +41,19 @@ build directories; no physical disk or existing user image is formatted/overwrit
 The guarded guest verifier and deliberately failing package are test media only,
 not programs installed into the production ISO.
 
-The terminal prints the evidence directory and a private `setup-code.txt` filename,
-not its secret contents. Open that file locally to obtain the one-time setup code.
-Then open **http://127.0.0.1:8080**, choose **Package Center** in the dock/launcher,
-enter the setup code and choose your own administrator password. There is no default
-password. Setup codes expire after ten minutes; restarting an unconfigured test VM
-through the local runner can enable a fresh local setup window.
+Open **http://127.0.0.1:8080**. On a new volume, choose the main ZionOS username and
+password, then enter the desktop. There is no setup code or default password.
+Usernames are 3–32 lowercase ASCII letters/digits/underscore/hyphen, starting with a
+letter; passwords are 12–128 bytes. Package Center uses that same system session:
+it has no separate login, administrator account or user-management screen.
+
+Existing Genesis accounts keep their password and sessions and acquire username
+**admin**. Their installed applications/data remain in place. New accounts can use
+another chosen name. The only implemented role is administrator; multi-user creation,
+standard-user roles and full RBAC are future work, not simulated functionality.
+Use the account button in the desktop top bar to sign out. Session expiry returns
+to the system login screen. Unavailable account storage allows read-only monitoring,
+while package administration remains unavailable.
 
 The runner accepts `quit` or Ctrl+C for a clean poweroff. It retains the test image
 and metadata. To reboot with **the same application/account data**:
@@ -147,12 +154,11 @@ The hello backend persists its greeting/state privately. Its own browser SDK
 settings/files capabilities remain unavailable until a general authenticated
 application permission broker is implemented; Package Center is not that broker.
 
-## Local console bootstrap, catalog and diagnostics
+## Local console compatibility, catalog and diagnostics
 
 On the **target ZionOS local root console**, never the WSL/Windows developer host:
 
 ```sh
-zion-platform bootstrap
 zion-platform catalog-import /path/to/trusted-local-development.zpk
 zpk list
 zpk info org.zionos.zion-hello
@@ -162,10 +168,13 @@ zpk repair --plan org.zionos.zion-hello
 cat /run/zionos/platform.json
 ```
 
-`bootstrap` writes its one-time code only to the controlling terminal. Do not put
-passwords/session tokens into command lines, logs, Git, screenshots or shared artifacts.
-`bootstrap-file` exists for private root-owned automation inputs. Password reset/RBAC/
-MFA are not implemented; account recovery needs separate local administration design.
+`zion-platform bootstrap` and `bootstrap-file` remain compatibility tools for the
+earlier API; they are not required by the desktop setup/login flow. Ordinary setup
+uses the first trusted localhost browser and refuses replacement of an existing
+owner. Do not put passwords/session tokens into command lines, logs, Git, screenshots
+or shared artifacts. Password reset/RBAC/MFA are not implemented; account recovery
+needs separate local administration design. A desktop identity is not a Unix/root
+console account.
 
 A missing/invalid/corrupt configured volume or registry leaves Package Center degraded;
 it never installs into RAM or silently repairs storage. Production volume preparation
@@ -184,7 +193,7 @@ bash tests/apps/check.sh --vm           # existing native SDK regression on curr
 
 The full Package Center VM test uses the production volume/OpenRC services and
 authenticated Core/broker, not mocked installer state. It includes controlled local
-setup, GUI file upload/review/install, service identity, launcher/window/SDK,
+code-free system setup/login, GUI file upload/review/install, service identity, launcher/window/SDK,
 stop/start/restart, account/app/data persistence, upgrade/failed-start recovery,
 interrupted journal recovery, manual rollback, uninstall, CSRF/auth/IPC/archive
 regressions, storage reserve refusal and missing/invalid/corrupt degraded boots.

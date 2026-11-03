@@ -21,8 +21,11 @@ not grant privileged lifecycle/settings operations to browser JavaScript.
 - [x] ZPK dinamic: launcher/search, icon, instanțe multiple, dock/pin și tastatură.
 - [x] SDK cu iframe opac, CSP, verificări sursă/sesiune/permisiuni și teme/dialoguri/notificări.
 - [x] Chromium real desktop/mobil și QEMU nativ: ferestre, SDK, disable/uninstall și revocare assets.
-- [x] Package Center: setup/login/logout, catalog, upload/preview/review, lifecycle,
+- [x] Package Center: catalog, upload/preview/review, lifecycle,
   upgrade/rollback/uninstall, progres real, teme dark/light și layout mobil.
+- [x] Un singur setup/login/logout ZionOS în `session.js`/`.css`; Package Center
+  folosește sesiunea globală, fără formulare sau conturi separate. Conturile vechi
+  păstrează parola și primesc username `admin`. Roluri standard/multi-user: viitor.
 - [x] Carduri apăsabile în grid, navigare din tastatură, pagină cu descriere,
   compatibilitate/dependențe/permisiuni și acțiuni principale sus. Install duce
   separat la aprobarea permisiunilor; navigarea prin catalog nu rezervă preview-uri.

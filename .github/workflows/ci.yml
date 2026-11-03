@@ -40,7 +40,7 @@ jobs:
         run: cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello --prepare-builder
       - name: SDK types/protocol and real browser integration (no host application services)
         run: bash tests/apps/check.sh --browser
-      - name: Package Center card navigation and lifecycle controls (UI fixtures only)
+      - name: Shared system session and Package Center navigation (UI fixtures only)
         run: bash tests/package-center/check.sh --browser
       - name: E2E image guardrails and three real Forge package versions (no host installation)
         run: bash tests/e2e/check.sh --packages

@@ -3,7 +3,8 @@
 - [x] Root-only target platform CLI; no host installation or package execution in unit tests.
 - [x] Explicit UUID/preformatted ext4 validation, read-only fsck/marker inspection,
   pinned device identity and persistent application mounts; no formatter/repair command.
-- [x] Single administrator, Argon2id, controlled local bootstrap, persistent sessions,
+- [x] Shared ZionOS system owner, code-free localhost enrollment, named login,
+  legacy account migration, Argon2id, persistent sessions,
   server-side CSRF validation, expiration, logout and login throttling.
 - [x] Versioned bounded Unix IPC, SO_PEERCRED at both ends, exactly one validated
   preview descriptor, root-owned session-bound package snapshots and permission review.

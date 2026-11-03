@@ -1,7 +1,7 @@
 # ZionOS — instructions for coding agents
 
 ## Mission and current state
-ZionOS is an experimental, bootable NAS appliance OS built on Alpine Linux 3.23 (OpenRC and an Alpine LTS kernel), a Rust/Axum `zion-core` service, and a browser-based desktop shell. Genesis 0.7 adds an authenticated local native Package Center with an explicitly configured persistent ext4 application volume. Disk/pool discovery stays read-only and the **restricted QEMU-only inspection lab** keeps provisioning `--apply` disabled pending a verified exclusive executor. It is **not production-ready**.
+ZionOS is an experimental, bootable NAS appliance OS built on Alpine Linux 3.23 (OpenRC and an Alpine LTS kernel), a Rust/Axum `zion-core` service, and a browser-based desktop shell. Genesis 0.7 has one shared ZionOS desktop account/session used by Package Center, with an explicitly configured persistent ext4 application volume. Disk/pool discovery stays read-only and the **restricted QEMU-only inspection lab** keeps provisioning `--apply` disabled pending a verified exclusive executor. It is **not production-ready**.
 
 Read the actual source before modifying it. Do not rely solely on patch names, README milestones, or prior assumptions. Preserve working boot, DHCP, OpenRC and API behavior.
 
@@ -99,7 +99,16 @@ Physical disks are forbidden for testing; fresh image preparation requires exclu
 regular files, descriptor pinning, build-directory containment and owner/link checks.
 Production volume boot only selects the configured UUID and validates before mounting;
 missing/invalid/corrupt storage must degrade, never install into RAM or auto-repair.
-Keep local bootstrap secrets out of logs/screenshots/commits. No default password.
+Keep credentials out of logs/screenshots/commits. No default password. The ordinary
+first-owner flow is code-free setup on localhost with exact Origin/Host enforcement,
+followed by a single desktop username/password login. Reuse this system session in
+Package Center; never create package-specific accounts or a second login. Existing
+accounts migrate to username admin without resetting hashes/sessions. Only the
+administrator role is implemented; do not claim multi-user/RBAC support. The old
+root-console bootstrap remains a compatibility tool, not a normal UI prerequisite.
+The initial trusted local visitor can claim an unconfigured system; never expose
+the development listener to LAN/public clients. Keep server-side session/role/CSRF
+checks in both Core and broker; hiding UI controls is not authorization.
 LAN/TLS/Secure-cookie/proxy administration is unsupported; do not broaden the local
 network contract without implementing secure transport. Report enforced controls
 separately from planned quotas, app capability brokering and publisher authentication.

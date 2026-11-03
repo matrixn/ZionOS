@@ -21,6 +21,7 @@ feature only builds the separate guarded `guest.rs` fixture; it is not shipped i
 the production ISO or enabled in the broker.
 
 `--browser` uses actual UI code in Chromium with explicitly mocked API fixtures:
+code-free system enrollment, shared login, expiration/logout, UI role refusal,
 seven cards, grid wrapping, keyboard navigation, untrusted text rendering,
 installed/not-installed and running/stopped/static controls, mobile layout and
 separate permission approval. Browsing details must not allocate preview receipts.
@@ -28,7 +29,8 @@ This does not claim native execution; `--vm` supplies the real operation coverag
 
 The VM variant compiles three actual Forge versions and a background-only Cargo
 example, then uses the production ISO, OpenRC adapter and authenticated Core/broker.
-Chromium operates the real desktop: bootstrap/login, catalog preview, file upload,
+Chromium operates the real desktop: system setup/login without bootstrap codes,
+automatic Package Center access through that session, catalog preview, file upload,
 permission/trust approval, install, start/stop/restart, launcher/window/SDK,
 upgrade/failure/rollback, uninstall and logout. Two simultaneous real background
 installs must produce one accepted operation and one BUSY response, with no fake
@@ -53,8 +55,8 @@ Use `ZION_CENTER_LEGACY=1 bash scripts/run-qemu-package-center.sh` to force TCG/
 instead of available KVM. This checks the exercised execution paths on an emulated
 legacy CPU; it is not certification of every third-party instruction or real hardware.
 
-Logs, screenshots, fixture media, random setup code/password and persistent images
+Logs, screenshots, fixture media, random test passwords and persistent images
 stay in the ignored evidence directory. Credentials are private files: never attach
 the directory wholesale to issues/CI artifacts. Screenshots omit password fields.
-The interactive runner prints the code's filename, not its contents. Review evidence
+The interactive runner asks the user to choose a system username/password. Review evidence
 for secrets before sharing it. See [executed results](../../docs/GENESIS_07_VERIFICATION.md).

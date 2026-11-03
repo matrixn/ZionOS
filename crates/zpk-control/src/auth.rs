@@ -19,6 +19,12 @@ fn argon() -> Result<Argon2<'static>> {
 fn password_ok(s: &str) -> bool {
     (12..=128).contains(&s.len()) && !s.contains('\0')
 }
+fn username_ok(s: &str) -> bool {
+    (3..=32).contains(&s.len())
+        && s.as_bytes()[0].is_ascii_lowercase()
+        && s.bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"_-".contains(&c))
+}
 fn equal(a: &str, b: &str) -> bool {
     a.len() == b.len() && a.bytes().zip(b.bytes()).fold(0u8, |n, (a, b)| n | (a ^ b)) == 0
 }
@@ -56,6 +62,18 @@ impl Auth {
         if check != "ok" {
             return fail("corrupt authentication database");
         }
+        let has_username = db
+            .prepare("PRAGMA table_info(administrator)")?
+            .query_map([], |r| r.get::<_, String>(1))?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+            .iter()
+            .any(|s| s == "username");
+        if !has_username {
+            db.execute(
+                "ALTER TABLE administrator ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'",
+                [],
+            )?;
+        }
         Ok(Self { db })
     }
     pub fn configured(&self) -> Result<bool> {
@@ -70,6 +88,38 @@ impl Auth {
             return fail("administrator exists or invalid one-time bootstrap code");
         }
         self.db.execute("INSERT INTO bootstrap VALUES(1,?1,?2) ON CONFLICT(id) DO UPDATE SET hash=excluded.hash,expires=excluded.expires",params![hash(code.as_bytes()),now()?+600])?;
+        Ok(())
+    }
+    pub fn username(&self) -> Result<String> {
+        Ok(self
+            .db
+            .query_row("SELECT username FROM administrator WHERE id=1", [], |r| {
+                r.get(0)
+            })?)
+    }
+    /// First ZionOS owner enrollment. The local-only Core boundary and exact Origin
+    /// gate are mandatory; only the dedicated Core peer can request this over IPC.
+    pub fn enroll(&mut self, username: &str, password: &str) -> Result<()> {
+        self.attempt()?;
+        if self.configured()? || !username_ok(username) || !password_ok(password) {
+            return fail("ZionOS is already configured or the username/password is invalid");
+        }
+        self.create_owner(username, password)
+    }
+    fn create_owner(&mut self, username: &str, password: &str) -> Result<()> {
+        let salt = SaltString::encode_b64(&crate::entropy()?[..16])?;
+        let hashed = argon()?
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
+        let tx = self.db.transaction()?;
+        tx.execute(
+            "INSERT INTO administrator(id,hash,username) VALUES(1,?1,?2)",
+            params![hashed, username],
+        )?;
+        tx.execute("DELETE FROM bootstrap", [])?;
+        tx.execute("UPDATE throttle SET fails=0,until_time=0", [])?;
+        tx.commit()?;
+        self.audit("setup", "ZionOS owner created")?;
         Ok(())
     }
     fn attempt(&self) -> Result<()> {
@@ -106,19 +156,12 @@ impl Auth {
             self.failed()?;
             return fail("invalid setup code or password (12..128 bytes)");
         }
-        let salt = SaltString::encode_b64(&crate::entropy()?[..16])?;
-        let hashed = argon()?
-            .hash_password(password.as_bytes(), &salt)?
-            .to_string();
-        let tx = self.db.transaction()?;
-        tx.execute("INSERT INTO administrator VALUES(1,?1)", [hashed])?;
-        tx.execute("DELETE FROM bootstrap", [])?;
-        tx.execute("UPDATE throttle SET fails=0,until_time=0", [])?;
-        tx.commit()?;
-        self.audit("setup", "administrator created")?;
-        Ok(())
+        self.create_owner("admin", password)
     }
     pub fn login(&mut self, password: &str) -> Result<(String, String)> {
+        self.login_named("admin", password)
+    }
+    pub fn login_named(&mut self, username: &str, password: &str) -> Result<(String, String)> {
         self.attempt()?;
         let encoded: Option<String> = self
             .db
@@ -131,7 +174,9 @@ impl Auth {
             if !encoded.starts_with("$argon2id$v=19$m=19456,t=2,p=1$") {
                 return fail("corrupt password parameters");
             }
-            password_ok(password)
+            username_ok(username)
+                && equal(username, &self.username()?)
+                && password_ok(password)
                 && argon()?
                     .verify_password(password.as_bytes(), &PasswordHash::new(encoded)?)
                     .is_ok()
@@ -221,6 +266,49 @@ impl Auth {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn one_system_owner_named_login_and_no_reenrollment() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut a = Auth::open(&dir.path().join("auth")).unwrap();
+        let pass = random().unwrap();
+        for name in ["../root", "Root", "ab", "user\nname"] {
+            assert!(a.enroll(name, &pass).is_err());
+        }
+        assert!(!a.configured().unwrap());
+        a.enroll("owner", &pass).unwrap();
+        assert_eq!(a.username().unwrap(), "owner");
+        assert!(a.login_named("admin", &pass).is_err());
+        let (s, c) = a.login_named("owner", &pass).unwrap();
+        a.authorize(&s, Some(&c)).unwrap();
+        assert!(a.enroll("replacement", &random().unwrap()).is_err());
+        assert!(a.login_named("owner", &pass).is_ok());
+    }
+    #[test]
+    fn legacy_account_keeps_password_and_sessions_as_system_admin() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("auth");
+        let mut a = Auth::open(&file).unwrap();
+        let pass = random().unwrap();
+        a.enroll("admin", &pass).unwrap();
+        let (s, c) = a.login(&pass).unwrap();
+        let hash: String =
+            a.db.query_row("SELECT hash FROM administrator", [], |r| r.get(0))
+                .unwrap();
+        a.db.execute("ALTER TABLE administrator DROP COLUMN username", [])
+            .unwrap();
+        drop(a);
+        let mut a = Auth::open(&file).unwrap();
+        assert_eq!(a.username().unwrap(), "admin");
+        assert_eq!(
+            a.db.query_row("SELECT hash FROM administrator", [], |r| r
+                .get::<_, String>(0))
+                .unwrap(),
+            hash
+        );
+        a.authorize(&s, Some(&c)).unwrap();
+        assert!(a.login_named("admin", &pass).is_ok());
+        assert!(a.enroll("other", &pass).is_err());
+    }
     #[test]
     fn setup_sessions_csrf_expiry_and_logout() {
         let dir = tempfile::tempdir().unwrap();

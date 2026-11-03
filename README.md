@@ -4,7 +4,8 @@ ZionOS este un sistem NAS live/diskless: Alpine Linux 3.23, kernel Alpine LTS,
 OpenRC, API Rust/Axum și desktop în browser. **Nu este pregătit pentru producție.**
 Sistemul de bază rămâne live/diskless. Aplicațiile, contul administratorului și
 registrul persistă numai pe volumul ext4 configurat explicit prin UUID.
-Package Center are autentificare, sesiuni și CSRF; API-urile NAS rămân read-only.
+Desktopul are o singură autentificare ZionOS, folosită și de Package Center;
+operațiile cer rol de administrator și CSRF. API-urile NAS rămân read-only.
 Administrarea este limitată la fluxul local/QEMU `127.0.0.1:8080`, fără acces LAN.
 
 **0.6.1 suspendă `zion-lab-provision --apply`.** Planul și diagnosticul rămân
@@ -18,7 +19,8 @@ cursa dintre verificare și formatare. Un executor exclusiv verificat este cerin
 - [x] ISO cu Manager, Runtime, broker și catalog local `zion-hello` compilat prin Forge.
 - [x] Volum persistent selectat prin UUID, validat înaintea montării; mod degradat
   explicit pentru volum absent/invalid sau registru corupt, fără instalare în RAM.
-- [x] Administrator creat prin bootstrap local, Argon2id, sesiuni persistente,
+- [x] Cont principal ZionOS configurat din browserul localhost, fără coduri; un
+  singur login pentru desktop și Package Center, Argon2id și sesiuni persistente,
   expirare/logout, Origin/Host, CSRF și autorizare verificată independent în broker.
 - [x] Core dedicat neprivilegiat; broker root cu IPC Unix versionat, peer credentials,
   descriptori read-only, acțiuni limitate și jurnal/audit; fără shell arbitrar.
@@ -47,8 +49,11 @@ bash scripts/run-qemu-package-center.sh
 bash scripts/run-qemu-package-center.sh --resume build/center-XXXXXX
 ```
 
-Deschide **http://127.0.0.1:8080 → Package Center**. Codul inițial este în fișierul
-privat `setup-code.txt` din directorul afișat; alegi parola, nu există una implicită.
+Deschide **http://127.0.0.1:8080**. La prima pornire alegi numele și parola contului
+principal ZionOS; apoi deschizi Package Center fără alt login sau cont separat.
+Pe volumele existente folosești numele **`admin`** și parola aleasă anterior.
+Nu există parolă implicită. Rolul implementat acum este administrator; administrarea
+mai multor utilizatori și rolurile standard sunt încă neimplementate.
 Comanda `quit` oprește VM-ul curat. Nu rula simultan alt server/VM pe portul 8080.
 Fără `--resume` se creează alt mediu gol; nu se formatează un disc existent.
 

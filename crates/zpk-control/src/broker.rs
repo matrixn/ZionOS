@@ -301,18 +301,24 @@ impl Broker {
                     .setup(&code, &password)?;
                 Ok(json!({"configured":true}))
             }
-            Request::Login { password } => {
-                let (s, c) = self
-                    .auth
+            Request::Enroll { username, password } => {
+                self.auth
                     .lock()
                     .map_err(|_| "authentication unavailable")?
-                    .login(&password)?;
-                Ok(json!({"session":s,"csrf":c,"role":"administrator","expires_in":28800}))
+                    .enroll(&username, &password)?;
+                Ok(json!({"configured":true}))
+            }
+            Request::Login { username, password } => {
+                let mut a = self.auth.lock().map_err(|_| "authentication unavailable")?;
+                let (s, c) = a.login_named(&username, &password)?;
+                Ok(
+                    json!({"session":s,"csrf":c,"username":a.username()?,"role":"administrator","expires_in":28800}),
+                )
             }
             Request::Session { session } => {
                 let a = self.auth.lock().map_err(|_| "authentication unavailable")?;
                 let csrf = a.csrf(&session)?;
-                Ok(json!({"role":"administrator","csrf":csrf}))
+                Ok(json!({"role":"administrator","username":a.username()?,"csrf":csrf}))
             }
             Request::Logout { auth } => {
                 self.auth

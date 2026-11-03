@@ -58,7 +58,7 @@ class OverlaySafety(unittest.TestCase):
             directory = Path(directory)
             stage = directory / "stage"
             stage.mkdir()
-            for name in ("zion-core", "index.html", "app.js", "zion-core.initd", "zion-platform", "zpk", "zpk-runtime"):
+            for name in ("zion-core", "index.html", "app.js", "session.js", "session.css", "zion-core.initd", "zion-platform", "zpk", "zpk-runtime"):
                 (stage / name).write_text("fixture\n")
             (stage / "apps").mkdir()
             for name in ("registry.js", "bridge.js", "package-center.js", "package-center.css"):

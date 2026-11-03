@@ -7,6 +7,7 @@
   <meta name="description" content="ZionOS — personal storage, beautifully simple.">
   <title>ZionOS — Your space, in control</title>
   <link rel="stylesheet" href="/package-center.css">
+  <link rel="stylesheet" href="/desktop-session.css">
   <style>
     /* ZionOS design tokens. No CSS framework or CDN required inside the NAS. */
     :root { color-scheme:dark; --ink:#ecf5f7; --muted:#91a8b1; --faint:#637e8b; --surface:rgba(14,33,46,.83); --surface2:rgba(23,46,58,.84); --surface3:rgba(30,55,67,.76); --edge:rgba(196,227,234,.14); --edge-strong:rgba(205,238,243,.23); --shadow:0 26px 90px rgba(1,9,20,.38),0 8px 24px rgba(0,9,15,.18); --accent:#6fe4cf; --accentDeep:#0a665c; --good:#73dec3; --bad:#ffab9f; --warn:#f3c89c; --chip:rgba(163,220,231,.10); --blur:blur(28px); --radius:20px; --desktopTop:54px; --dockBottom:22px; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
@@ -139,6 +140,7 @@
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5.5 18c1-5 12-5 13 0"/></symbol>
     <symbol id="i-package" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z"/><path d="m3 7 9 5 9-5M12 12v10M7.5 4.5l9 5v5"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
     <symbol id="i-hard-drive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 14h18"/><circle cx="7.5" cy="17" r=".65" fill="currentColor" stroke="none"/><path d="M13 17h4"/></symbol>
@@ -161,7 +163,7 @@
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
   </svg>
-  <div id="app" class="desktop">
+  <div id="app" class="desktop" inert>
     <div class="noise"></div>
     <header class="topbar">
       <div class="topbar-left">
@@ -169,6 +171,7 @@
         <div class="topbar-sep"></div><span class="topbar-label">Genesis · Personal cloud workspace</span>
       </div>
       <div class="topbar-right">
+        <button class="topbar-action" id="zion-account" disabled>Checking session…</button>
         <button class="topbar-action" id="quick-search" title="Caută aplicații (Ctrl+K)"><svg class="svg small"><use href="#i-search"/></svg><span class="action-label">Caută</span></button>
         <button class="topbar-action" id="connection-button" title="Stare Zion Core"><span class="status-bead" id="system-led"></span><span class="action-label" id="connection-label">Conectare...</span></button>
         <button class="topbar-action" id="theme-toggle" title="Schimbă tema"><svg class="svg small"><use href="#i-moon"/></svg></button>
@@ -272,6 +275,7 @@
   </template>
   <script src="/desktop-app-registry.js" defer></script>
   <script src="/desktop-app-bridge.js" defer></script>
+  <script src="/desktop-session.js" defer></script>
   <script src="/package-center.js" defer></script>
   <script src="/app.js" defer></script>
 </body>

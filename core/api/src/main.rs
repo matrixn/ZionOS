@@ -259,6 +259,12 @@ async fn package_center_js() -> Response {
 async fn package_center_css() -> Response {
     serve_asset("apps/package-center.css", "text/css; charset=utf-8")
 }
+async fn desktop_session_js() -> Response {
+    serve_asset("session.js", "application/javascript; charset=utf-8")
+}
+async fn desktop_session_css() -> Response {
+    serve_asset("session.css", "text/css; charset=utf-8")
+}
 
 #[cfg(test)]
 fn router(policy: access::Policy) -> Router {
@@ -271,6 +277,8 @@ fn router_with_apps(policy: access::Policy, store: apps::Store) -> Router {
         .route("/app.js", get(app_js))
         .route("/package-center.js", get(package_center_js))
         .route("/package-center.css", get(package_center_css))
+        .route("/desktop-session.js", get(desktop_session_js))
+        .route("/desktop-session.css", get(desktop_session_css))
         .route("/desktop-app-registry.js", get(app_registry_js))
         .route("/desktop-app-bridge.js", get(app_bridge_js))
         .route("/api/apps", get(apps::list))

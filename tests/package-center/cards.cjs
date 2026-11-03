@@ -19,7 +19,7 @@ async function main(){const browser=await chromium.launch({headless:true});try{
   else throw new Error('Unexpected fixture route '+url.pathname);
   await route.fulfill({json:{ok:true,data}});
  });
- await page.goto('http://center.test');await page.addScriptTag({path:path.join(ROOT,'web/desktop/apps/package-center.js')});await page.evaluate(()=>ZionPackageCenter.mount(document.querySelector('#mount'),{toast:()=>{},openApp:()=>{},refresh:async()=>{}}));
+ await page.goto('http://center.test');await page.addScriptTag({path:path.join(ROOT,'web/desktop/session.js')});await page.addScriptTag({path:path.join(ROOT,'web/desktop/apps/package-center.js')});await page.evaluate(()=>ZionPackageCenter.mount(document.querySelector('#mount'),{toast:()=>{},openApp:()=>{},refresh:async()=>{}}));
  const pc=page.locator('.package-center');await pc.locator('[data-pc-tab=discover]').waitFor();await pc.locator('[data-pc-tab=discover]').click();assert.equal(await pc.locator('.pc-card').count(),7);
  const boxes=await pc.locator('.pc-card').evaluateAll(nodes=>nodes.map(n=>({x:n.offsetLeft,y:n.offsetTop})));assert.ok(boxes[0].x!==boxes[1].x&&boxes[0].y===boxes[1].y,'Cards must form multiple columns');assert.ok(boxes.at(-1).y>boxes[0].y,'Cards must wrap into rows');
  await pc.getByRole('searchbox',{name:'Search packages'}).fill('Native Package 5');assert.equal(await pc.locator('.pc-card').count(),1);await pc.getByRole('searchbox',{name:'Search packages'}).fill('');await pc.locator('[data-pc-tab=installed]').click();await pc.getByRole('combobox',{name:'Filter service state'}).selectOption('running');assert.equal(await pc.locator('.pc-card').count(),1);await pc.locator('[data-pc-tab=discover]').click();assert.equal(await pc.locator('.pc-card').count(),7);

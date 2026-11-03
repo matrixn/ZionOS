@@ -65,11 +65,20 @@ of the OS version. The provisioning `--apply` executor remains disabled.
 
 ## Administrator authentication and transport
 
-There is one administrator account, no default password. Local target root runs
-`zion-platform bootstrap`, which writes a fresh 256-bit one-time setup code only to
-its controlling terminal. The code expires after ten minutes; the browser must
-provide it to create the account. A private root-owned `bootstrap-file` input exists
-for guarded VM automation. Existing accounts cannot be re-bootstrapped through HTTP.
+There is one **ZionOS system owner**, shared by the desktop and Package Center,
+with no default password. First setup asks for a username/password in the trusted
+localhost browser; there is no manual code. Core requires an exact local Origin
+and localhost Host for enrollment; the ordinary network boundary also checks the
+actual peer. The broker requires the dedicated Core peer and independently refuses
+enrollment after an owner exists. SQLite's singleton owner row prevents replacement.
+The first trusted local browser can claim an unconfigured system: do not expose
+this development listener to LAN/public clients or untrusted host processes.
+
+The existing private authentication database is reused, not duplicated by Package
+Center. Legacy accounts gain username `admin` while keeping their Argon2 hash and
+active sessions. New usernames are chosen at enrollment. The only implemented role
+is administrator; standard-user creation and general RBAC remain future work.
+The old root bootstrap/code APIs remain compatibility tools, not UI prerequisites.
 
 Passwords are 12–128 bytes and stored as Argon2id PHC hashes, with independent random
 128-bit salts, 19 MiB memory, two iterations and one lane. These parameters follow
@@ -83,7 +92,12 @@ stored. Session-bound CSRF tokens are held in the root-private database. Session
 expire after 20 minutes idle or eight hours absolute; logout invalidates the server
 record. At most eight sessions are retained. Cookies are host-only, `HttpOnly`,
 `SameSite=Strict`, and scoped to `/api`, so package asset requests do not receive them.
-The first-party UI keeps CSRF in memory; package JavaScript receives no admin token.
+The shared desktop session module keeps CSRF in memory; Package Center consumes
+that session, with no password form or account management of its own. Logout is in
+the system top bar; logout/expiry reloads the desktop into system login. Package
+JavaScript in opaque frames receives no admin token. The desktop login/inert gate
+is a UI boundary; existing local read-only NAS/health/discovery routes are deliberately
+unchanged. Server-side authorization of actual package effects remains mandatory.
 
 **This milestone supports local HTTP/QEMU localhost development only.** The cookie
 does not use `Secure` on that HTTP development transport. The existing IP/Host allowlist

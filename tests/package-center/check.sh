@@ -12,11 +12,13 @@ cargo clippy --locked --manifest-path crates/zpk-control/Cargo.toml --all-target
 node --check web/desktop/apps/package-center.js
 node --check tests/package-center/browser.cjs
 node --check tests/package-center/cards.cjs
+node --check tests/package-center/session.cjs
+node --check web/desktop/session.js
 python3 tests/e2e/images_test.py
 python3 tests/package-center/images_test.py
 python3 -m py_compile tests/package-center/*.py
 if [[ -z "${1:-}" ]]; then exit 0; fi
-if [[ "$1" == --browser ]]; then node tests/package-center/cards.cjs; exit 0; fi
+if [[ "$1" == --browser ]]; then node tests/package-center/session.cjs; node tests/package-center/cards.cjs; exit 0; fi
 exec 9>build/.center-test.lock
 flock -n 9 || { echo 'Another Package Center VM owns this fixture' >&2; exit 1; }
 folder="$(mktemp -d "$ROOT/build/center-XXXXXX")"

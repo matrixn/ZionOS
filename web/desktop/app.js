@@ -497,6 +497,7 @@ appBridge=new ZionAppBridge.Bridge({window,crypto,isCurrent:app=>Date.now()<=app
   setSize:sizeWindow,notify:(app,notice)=>toast(`${app.title} · ${notice.title}: ${notice.message}`),confirm:appConfirm,
   navigationBlocked:key=>{closeWindow(key);toast('Pagina aplicației s-a schimbat. Redeschide aplicația din launcher.');}});
 loadPrefs();
+ZionSession.initialize();
 renderAppButtons();
 wireEvents();
 updateClock();

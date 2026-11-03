@@ -45,7 +45,13 @@ pub enum Request {
         code: String,
         password: String,
     },
+    Enroll {
+        username: String,
+        password: String,
+    },
     Login {
+        #[serde(default = "default_username")]
+        username: String,
         password: String,
     },
     Session {
@@ -91,6 +97,9 @@ pub enum Request {
         session: String,
         id: String,
     },
+}
+pub fn default_username() -> String {
+    "admin".into()
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

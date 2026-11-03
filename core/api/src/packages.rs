@@ -183,6 +183,7 @@ pub fn router() -> Router {
         .route("/api/auth/status", get(status))
         .route("/api/auth/session", get(current))
         .route("/api/auth/setup", post(setup))
+        .route("/api/auth/enroll", post(enroll))
         .route("/api/auth/login", post(login))
         .route("/api/auth/logout", post(logout))
         .route("/api/packages", get(installed))
@@ -215,7 +216,55 @@ async fn status() -> WebResponse {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Password {
+    #[serde(default = "protocol::default_username")]
+    username: String,
     password: String,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Enrollment {
+    username: String,
+    password: String,
+}
+fn enrollment_origin(headers: &HeaderMap) -> WebResult<()> {
+    origin(headers)?;
+    let local = headers
+        .get(header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.parse::<axum::http::uri::Authority>().ok())
+        .is_some_and(|a| a.host() == "127.0.0.1" || a.host().eq_ignore_ascii_case("localhost"));
+    if !local {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "LOCAL_SETUP_ONLY",
+            "First ZionOS setup is available only through localhost",
+        ));
+    }
+    Ok(())
+}
+async fn enroll(headers: HeaderMap, Json(body): Json<Enrollment>) -> WebResponse {
+    if let Err(e) = enrollment_origin(&headers) {
+        return e;
+    }
+    if body.username.len() > 32 || body.password.len() > 128 {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "INVALID_ENROLLMENT",
+            "Invalid ZionOS username or password",
+        );
+    }
+    match rpc(
+        Rpc::Enroll {
+            username: body.username,
+            password: body.password,
+        },
+        None,
+    )
+    .await
+    {
+        Ok(r) => response(r),
+        Err(e) => e,
+    }
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -260,6 +309,7 @@ async fn login(headers: HeaderMap, Json(body): Json<Password>) -> WebResponse {
     }
     match rpc(
         Rpc::Login {
+            username: body.username,
             password: body.password,
         },
         None,
@@ -709,5 +759,19 @@ mod tests {
                 .unwrap(),
         );
         assert!(session(&h).is_err());
+    }
+    #[test]
+    fn system_enrollment_requires_exact_localhost_origin() {
+        let mut h = HeaderMap::new();
+        for host in ["10.0.2.15:8080", "nas.example:8080"] {
+            h.insert(header::HOST, host.parse().unwrap());
+            h.insert(header::ORIGIN, format!("http://{host}").parse().unwrap());
+            assert!(enrollment_origin(&h).is_err());
+        }
+        h.insert(header::HOST, "127.0.0.1:8080".parse().unwrap());
+        h.insert(header::ORIGIN, "http://localhost:8080".parse().unwrap());
+        assert!(enrollment_origin(&h).is_err());
+        h.insert(header::ORIGIN, "http://127.0.0.1:8080".parse().unwrap());
+        enrollment_origin(&h).unwrap();
     }
 }

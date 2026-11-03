@@ -5,6 +5,56 @@ Branch: `feat/genesis-07-package-center`. Changes are prepared for review; no ma
 merge, force push, release publication, physical disk operation or host native
 application installation was performed.
 
+## Shared ZionOS system login — 2026-11-03
+
+The desktop now owns one shared username/password session. First-owner setup is
+code-free on localhost; Package Center has no credential forms, bootstrap-code
+field, sign-out control or separate account. It consumes the desktop session and
+still requires administrator authorization in Core and the root broker. Global
+sign-out is in the top bar; expiry returns to the system login. Existing accounts
+migrate to username `admin`, keeping their password hash, sessions and applications.
+New first owners choose their username. The only real account role is administrator;
+the non-admin browser fixture tests refusal, not implemented multi-user/RBAC.
+
+Changed components: shared `web/desktop/session.js`/`.css`, desktop entry/chrome,
+Package Center session consumption, Core local enrollment/static assets, broker
+named login/profile, authentication-database migration, ISO staging, VM onboarding,
+focused session tests and documentation. The legacy root bootstrap/API remains a
+compatibility tool. No ordinary user needs a setup code. Initial ownership belongs
+to the first trusted local browser; exact localhost Host/Origin, peer restrictions,
+singleton enrollment and existing-account refusal are enforced. Package writes
+remain session/role/CSRF protected. Local read-only NAS diagnostics remain unchanged.
+
+Executed results for this batch:
+
+- Core: **42** unit tests, rustfmt and Clippy `-D warnings` passed. New test checks
+  that first enrollment rejects non-local or mismatched Origins/Hosts.
+- Control: **11** tests, all-feature checks, format and strict Clippy passed.
+  New tests cover code-free named owner creation/replacement refusal and migration
+  preserving the old password hash and active sessions.
+- Browser: shared setup with password confirmation, exactly one login, no Package
+  Center password/code fields, session expiry, global logout and UI role refusal
+  passed. Existing seven-card/search/filter/keyboard/mobile tests passed.
+- Actual ISO built successfully (~358 MiB; cached build **87 seconds**).
+- Real full Package Center lifecycle passed across **six clean boots** in
+  `build/center-7sUwpD/`, now using system setup/login without any bootstrap fixture:
+  install, service/SDK, reboots, upgrade/failure/rollback, uninstall, global logout,
+  authorization/security checks and missing/invalid/corrupt degraded boots.
+- Old persistent `build/center-DG3IKP/` resumed under the new ISO and logged in as
+  `admin` with its original password; its installed app/autostart/window still worked.
+- Existing SDK: 17 Node/generated-type checks, separate Chromium regression and
+  native OpenRC/SDK QEMU regression passed. Foundation 26 tests, default Forge checks
+  (16 tests), eight image guards, 16 safety tests and shell/JS/YAML syntax passed.
+- Original snapshot boot/API/branding smoke passed (**51 seconds** with KVM).
+  Conroe and the opt-in Forge Docker test pair were not rerun for this batch;
+  actual Forge builds/packaging ran in the ISO and native fixtures.
+
+Logs: `build/system-session-{browser,iso,vm,schema,forge,sdk-browser,sdk-vm,
+legacy-resume,safety,source,smoke}.log`. Real first-owner screen:
+`build/center-7sUwpD/zionos-system-setup.png`; Package Center screenshots in the same
+directory show no separate account/login controls. Artifacts and test passwords
+remain ignored by Git. Earlier sections below retain prior milestone evidence.
+
 ## Package card/detail update — 2026-11-03
 
 Package Center now presents responsive, fully clickable cards with an icon/initial,
