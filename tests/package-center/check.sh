@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-case "${1:-}" in ''|--vm|--interactive) :;; *) echo 'Usage: bash tests/package-center/check.sh [--vm|--interactive]' >&2; exit 2;; esac
+case "${1:-}" in ''|--browser|--vm|--interactive) :;; *) echo 'Usage: bash tests/package-center/check.sh [--browser|--vm|--interactive]' >&2; exit 2;; esac
 if [[ $# -gt 1 ]]; then exit 2; fi
 mkdir -p build
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zionos/zpk-target}"
@@ -11,10 +11,12 @@ cargo test --locked --manifest-path crates/zpk-control/Cargo.toml --all-features
 cargo clippy --locked --manifest-path crates/zpk-control/Cargo.toml --all-targets --all-features -- -D warnings
 node --check web/desktop/apps/package-center.js
 node --check tests/package-center/browser.cjs
+node --check tests/package-center/cards.cjs
 python3 tests/e2e/images_test.py
 python3 tests/package-center/images_test.py
 python3 -m py_compile tests/package-center/*.py
 if [[ -z "${1:-}" ]]; then exit 0; fi
+if [[ "$1" == --browser ]]; then node tests/package-center/cards.cjs; exit 0; fi
 exec 9>build/.center-test.lock
 flock -n 9 || { echo 'Another Package Center VM owns this fixture' >&2; exit 1; }
 folder="$(mktemp -d "$ROOT/build/center-XXXXXX")"

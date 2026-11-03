@@ -593,8 +593,10 @@ fn catalog() -> Result<Vec<Value>> {
         return Ok(vec![]);
     }
     zpk_runtime::installed::secure_path(Path::new("/"), &index)?;
-    let entries: Vec<Value> =
-        serde_json::from_slice(&zpk_runtime::installed::read_file(&index, 65536)?)?;
+    let entries: Vec<Value> = serde_json::from_slice(&zpk_runtime::installed::read_file(
+        &index,
+        CATALOG_INDEX_LIMIT,
+    )?)?;
     if entries.len() > 32
         || entries.iter().any(|e| {
             !e["id"].as_str().is_some_and(token)

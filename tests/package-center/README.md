@@ -5,6 +5,7 @@ Read [the developer guide](../../docs/GENESIS_07.md) and
 
 ```sh
 bash tests/package-center/check.sh
+bash tests/package-center/check.sh --browser
 bash scripts/build-iso.sh
 bash tests/package-center/check.sh --vm
 bash scripts/run-qemu-package-center.sh
@@ -18,6 +19,12 @@ They do not create service accounts or run a
 privileged package installer/native app on the developer host. The `vm-tests` Cargo
 feature only builds the separate guarded `guest.rs` fixture; it is not shipped in
 the production ISO or enabled in the broker.
+
+`--browser` uses actual UI code in Chromium with explicitly mocked API fixtures:
+seven cards, grid wrapping, keyboard navigation, untrusted text rendering,
+installed/not-installed and running/stopped/static controls, mobile layout and
+separate permission approval. Browsing details must not allocate preview receipts.
+This does not claim native execution; `--vm` supplies the real operation coverage.
 
 The VM variant compiles three actual Forge versions and a background-only Cargo
 example, then uses the production ISO, OpenRC adapter and authenticated Core/broker.

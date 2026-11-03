@@ -24,6 +24,8 @@ cursa dintre verificare și formatare. Un executor exclusiv verificat este cerin
   descriptori read-only, acțiuni limitate și jurnal/audit; fără shell arbitrar.
 - [x] Discover, Installed, căutare/filtrare, upload real limitat, preview și acord
   explicit pentru permisiuni și încredere locală în arhive nesemnate.
+- [x] Grid responsive de carduri cu icon/inițială, versiune și stare; click/Enter/Space
+  deschide pagina de detalii. Install/Uninstall și Start/Stop depind de starea reală.
 - [x] Install, Start, Stop, Restart, status/loguri, upgrade, rollback executabil și
   uninstall cu păstrarea datelor; progres din fazele reale Manager/OpenRC.
 - [x] Launcher actualizat fără reload, icon/window/SDK, teme și notificări;

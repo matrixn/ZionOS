@@ -393,6 +393,27 @@ pub fn restore() -> Result<()> {
         if bundled.is_file() {
             import_catalog(bundled)?;
         }
+        let catalog = Path::new(STATE).join("catalog");
+        let index = catalog.join("index.json");
+        if index.exists() {
+            let entries: Vec<serde_json::Value> = serde_json::from_slice(
+                &zpk_runtime::installed::read_file(&index, CATALOG_INDEX_LIMIT)?,
+            )?;
+            if entries.len() > 32 {
+                return fail("local catalog limit");
+            }
+            for entry in entries.iter().filter(|e| e["manifest"].is_null()) {
+                let id = entry["id"]
+                    .as_str()
+                    .filter(|id| crate::token(id))
+                    .ok_or("invalid catalog id")?;
+                let path = catalog.join(format!("{id}.zpk"));
+                if crate::hash(&zpk_runtime::installed::read_file(&path, MAX_UPLOAD)?) != id {
+                    return fail("catalog hash mismatch");
+                }
+                import_catalog(&path)?;
+            }
+        }
         let mut m = Manager::open(Path::new("/"), Environment::Persistent, Alpine)?;
         for diagnostic in m.reconcile()? {
             eprintln!("ZPK recovery: {}", diagnostic.escape_debug());
@@ -469,18 +490,29 @@ pub fn import_catalog(source: &Path) -> Result<()> {
     }
     let index = root.join("index.json");
     let mut entries: Vec<serde_json::Value> = if index.exists() {
-        serde_json::from_slice(&zpk_runtime::installed::read_file(&index, 65536)?)?
+        serde_json::from_slice(&zpk_runtime::installed::read_file(
+            &index,
+            CATALOG_INDEX_LIMIT,
+        )?)?
     } else {
         vec![]
     };
-    if !entries.iter().any(|e| e["id"] == digest) {
-        entries.push(json!({"id":digest,"sha256":digest,"name":p.manifest.package.name,"version":p.manifest.package.version,"description":p.manifest.package.description,"publisher":p.manifest.package.author}));
+    let entry = json!({"id":digest,"sha256":digest,"package_id":p.manifest.package.id,"name":p.manifest.package.name,"version":p.manifest.package.version,"description":p.manifest.package.description,"publisher":p.manifest.package.author,"manifest":p.manifest});
+    if let Some(previous) = entries.iter_mut().find(|e| e["id"] == digest) {
+        // Refresh older catalog summaries without replacing the package archive.
+        *previous = entry;
+    } else {
+        entries.push(entry);
     }
     if entries.len() > 32 {
         return fail("local catalog limit");
     };
+    let encoded = serde_json::to_vec(&entries)?;
+    if encoded.len() as u64 > CATALOG_INDEX_LIMIT {
+        return fail("local catalog metadata size limit");
+    }
     let tmp = root.join("index.new");
-    fs::write(&tmp, serde_json::to_vec(&entries)?)?;
+    fs::write(&tmp, encoded)?;
     fs::File::open(&tmp)?.sync_all()?;
     fs::rename(tmp, index)?;
     fs::File::open(root)?.sync_all()?;

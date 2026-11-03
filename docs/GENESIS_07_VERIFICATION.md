@@ -5,6 +5,56 @@ Branch: `feat/genesis-07-package-center`. Changes are prepared for review; no ma
 merge, force push, release publication, physical disk operation or host native
 application installation was performed.
 
+## Package card/detail update — 2026-11-03
+
+Package Center now presents responsive, fully clickable cards with an icon/initial,
+name, version, description and installed/service status. Enter/Space open details.
+Details put Install/Uninstall and native Start/Stop/Restart beside the package title,
+followed by description, publisher/license/compatibility, dependencies, declared
+storage and permissions. Static packages have no service buttons. Maintenance,
+bounded logs, upgrades and executable rollback remain available below.
+
+Discover matches stable package IDs to the actual installed registry, so an
+installed catalog item offers Uninstall rather than another Install. Catalog
+metadata includes inspected manifests; older summaries are enriched from hash-checked
+local archives at startup. The index is bounded to 32 entries/1 MiB, below the IPC
+response limit. Browsing metadata does not allocate preview receipts or execute
+content. Install still requires fresh validation and explicit trust/permission review.
+
+Executed for this update:
+
+- Core: 41 tests, format, strict Clippy and release musl build passed.
+- Control: 9 tests/default and all-feature checks, format and strict Clippy passed.
+- Foundation: 26 tests and strict checks passed; Forge default checks passed
+  (16 tests; its two opt-in Docker tests were not rerun in this batch). Actual
+  Forge compilation/packaging was exercised by the ISO and VM fixture builds.
+- SDK: 17 Node tests/generated types, separate Chromium regression and actual native
+  SDK/OpenRC/QEMU regression passed.
+- New focused Chromium test: seven explicit API-fixture packages; multiple columns
+  and rows, search, state filtering, Enter/Space/back navigation, safe text rendering,
+  state-dependent actions, no receipt allocation while browsing, explicit approval
+  and mobile layout passed. This test does not run a host installer/native service.
+- Actual updated ISO built successfully: ~358 MiB, cached build about 71 seconds.
+- Full real Package Center workflow passed with six clean boots in
+  `build/center-btJTZn/`: uninstalled catalog details/Install/review, installed catalog
+  details/Uninstall/Stop, native startup and UI, Stop/Start/Restart, persistent reboots,
+  upgrade/failure/rollback, uninstall back to Install, security/capacity/recovery and
+  all three degraded cases. Logs: `build/package-cards-vm.log`.
+- Updated ISO resumed the earlier `build/center-DG3IKP/` volume, retaining the account,
+  app/autostart and working browser window; clean shutdown passed. Log:
+  `build/package-cards-resume.log`. Conroe was not rerun for this UI update; the prior
+  Genesis 0.7 Conroe result below remains historical evidence.
+- Eight fresh-image/resume guards, 16 shell safety tests, shell/OpenRC/JavaScript
+  syntax and workflow YAML parsing passed.
+
+Other logs use the prefix `build/package-cards-{browser,iso,schema,forge,sdk-browser,
+sdk-vm,safety,source}.log`. Actual updated UI screenshots are
+`build/center-btJTZn/package-center-{grid,dark,light,mobile,permissions}.png`.
+`build/package-center-grid-browser.png` shows seven **fixture** packages for layout
+testing; those are not fake entries added to the real catalog. All generated images,
+credentials and VM artifacts remain ignored by Git. Security/transport/storage
+limitations documented below are unchanged.
+
 ## Delivered code
 
 - `crates/zpk-control/`: Argon2id/local bootstrap/session/CSRF storage, bounded Unix

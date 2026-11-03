@@ -134,6 +134,12 @@ Install verifies that binding/hash again and requires exact permission declarati
 plus explicit trusted-local acknowledgement. No remote catalog is contacted. The
 bundled `zion-hello` catalog entry is compiled through Forge during ISO staging;
 local root may import additional inspected development archives.
+The bounded local index (32 entries, at most 1 MiB) includes validated manifests
+and stable package IDs for card details and installed-state matching. Older summaries
+are enriched at startup from the same hash-checked local archives, without running
+package contents. Browsing metadata creates no installation preview/snapshot; the
+Install action still obtains a fresh validated, session-bound receipt and requires
+the separate trust/permission confirmation.
 
 `/etc/zionos/package-policy.json` optionally overrides validated defaults:
 

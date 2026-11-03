@@ -23,6 +23,9 @@ not grant privileged lifecycle/settings operations to browser JavaScript.
 - [x] Chromium real desktop/mobil și QEMU nativ: ferestre, SDK, disable/uninstall și revocare assets.
 - [x] Package Center: setup/login/logout, catalog, upload/preview/review, lifecycle,
   upgrade/rollback/uninstall, progres real, teme dark/light și layout mobil.
+- [x] Carduri apăsabile în grid, navigare din tastatură, pagină cu descriere,
+  compatibilitate/dependențe/permisiuni și acțiuni principale sus. Install duce
+  separat la aprobarea permisiunilor; navigarea prin catalog nu rezervă preview-uri.
 - [ ] Settings/fișiere SDK și origini dedicate aplicațiilor; brokerul de pachete
   nu acordă aceste capabilități cadrelor aplicațiilor.
 
@@ -30,6 +33,9 @@ not grant privileged lifecycle/settings operations to browser JavaScript.
 (14 SDK/registry/bridge + 3 desktop existente). `--browser` folosește un Core debug
 neprivilegiat și servicii mock; `--vm` verifică suplimentar backendul nativ OpenRC.
 Vezi [App SDK](../../docs/zpk/APP_SDK.md) pentru setup și limitele de securitate.
+`bash tests/package-center/check.sh --browser` verifică separat grid-ul cu șapte
+pachete fixture, navigarea, acțiunile după stare și layout-ul mobil; fără servicii
+native sau installer executat pe host. `--vm` verifică operațiile reale în QEMU.
 Shift-launch sau `+` deschide altă instanță când manifestul permite. Pin persistă în
 browserul shell-ului, separat de settings API indisponibil pentru aplicații.
 Navigarea/reîncărcarea întregului document iframe închide fereastra. CSP nu garantează

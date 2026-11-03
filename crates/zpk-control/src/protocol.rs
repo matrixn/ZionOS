@@ -8,6 +8,7 @@ pub const MAX_UPLOAD: u64 = 64 * 1024 * 1024;
 pub const RESERVE: u64 = 64 * 1024 * 1024;
 pub const FRAME: usize = 16 * 1024;
 pub const RESPONSE: usize = 2 * 1024 * 1024;
+pub const CATALOG_INDEX_LIMIT: u64 = 1024 * 1024;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Credentials {

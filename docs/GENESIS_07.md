@@ -69,8 +69,11 @@ This is an emulated execution check, not physical hardware certification.
 
 ## Discover and install
 
-**Discover** shows the root-curated local catalog. The ISO bundles `Zion Hello`,
-compiled with the actual Forge. Choose **Preview package**, read its identity,
+**Discover** shows the root-curated local catalog as a responsive grid. Cards show
+an icon (or an initial fallback), version, description and installed/service state.
+Click a card or focus it and press Enter/Space to open its package detail page.
+The ISO bundles `Zion Hello`, compiled with the actual Forge. Choose **Install**
+on the detail page, read its identity,
 publisher, CPU/OS compatibility and requested permissions, then approve both:
 
 1. Explicit trust for this unsigned local development package.
@@ -117,9 +120,16 @@ confuse that fixture with a healthy application release.
 
 ## Operate, launch, update and remove
 
-In **Installed**, use search/state filters and **Details** to see metadata, native
+In **Installed**, use search/state filters and open a card to see metadata, native
 PID/status, declared/effective permissions, runtime policy and available controls.
 Use **Refresh** for external changes and bounded stdout logs for diagnostics.
+Details show description, publisher/license/version, compatibility, package
+dependencies, declared storage requirements and permissions. Primary actions are
+at the top: **Install** for a catalog package that is not installed, **Uninstall**
+for installed packages, **Start** for inactive services or **Stop** for running ones.
+Packages without services do not show service controls. Discover also reflects
+installed state; it does not offer another Install for an already installed ID.
+Opening catalog details is metadata-only and does not consume preview receipts.
 
 - **Start / Stop / Restart** use actual OpenRC lifecycle operations.
 - **Launch** opens the declared entry through the existing sandboxed SDK/window manager.
@@ -166,6 +176,7 @@ milestone. The runner's image preparation is a disposable development facility.
 
 ```sh
 bash tests/package-center/check.sh       # auth/IPC/concurrency + source/image safety
+bash tests/package-center/check.sh --browser # multi-card navigation/state controls, UI fixtures
 bash tests/package-center/check.sh --vm  # actual ISO, GUI and persistent reboots
 bash scripts/test-vm.sh                 # original non-persistent snapshot smoke
 bash tests/apps/check.sh --vm           # existing native SDK regression on current ISO
