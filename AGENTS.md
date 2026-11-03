@@ -7,6 +7,11 @@ Read the actual source before modifying it. Do not rely solely on patch names, R
 
 ## Repository map
 - `core/api/` — Rust HTTP server, metrics, storage and provisioning API; current web APIs are not authenticated.
+- `crates/zpk-schema/` — native package schema and bounded offline inspection; no extraction/execution.
+- `crates/zpk-forge/` — developer build CLI; third-party compilation only inside its constrained Docker builder, never on the host. No installation or privileged hooks.
+- `crates/zpk-runtime/` — native OpenRC runtime; no runtime containers. Host unit tests must use mock OpenRC operations and temporary roots. Run real identity/service/security tests only in the guarded disposable QEMU fixture.
+- `crates/zpk-common/` — shared ELF inspection used by Forge and Runtime; no process execution.
+- `crates/zpk-manager/` — local privileged package coordinator, SQLite registry/journal and Runtime adapter. Never run real installer/identity/service actions on the developer host. Unit tests use temporary roots and mock services; native integration uses only the guarded disposable persistent QEMU fixture.
 - `web/desktop/` — lightweight operating-system-style browser desktop and assets.
 - `platform/alpine/` — Alpine ISO profile, generated apk overlay, OpenRC startup configuration, lab utilities and branding.
 - `scripts/` — staging, ISO build, QEMU and testing.
@@ -42,7 +47,44 @@ Also run `bash -n` for Bash scripts, `sh -n` for portable shell files, and `node
 
 Do not claim ISO/QEMU tests passed when those tools are unavailable. Do not execute destructive lab commands in CI.
 
+For ZPK changes also run `bash tests/zpk/check.sh` and `bash tests/zpk/forge-check.sh`.
+Use `bash tests/zpk/forge-check.sh --docker` for opt-in isolated native build/runtime tests
+when a local Linux Docker daemon with cgroup v2 is available; never fall back to host compilation.
+
+For runtime changes run `bash tests/zpk/runtime-check.sh` and, when equipped with
+the Genesis ISO/QEMU/musl/xorriso, `bash tests/zpk/runtime-check.sh --vm`. Never invoke
+the guest fixture shell or native runtime administration against the developer host.
+Runtime grants must fail closed without required Linux controls; document rlimit vs
+aggregate quota, declaration vs enforcement, and process-restart vs reboot persistence.
+
+For manager changes run `bash tests/zpk/manager-check.sh` and, with a prepared Forge
+builder/Genesis ISO/QEMU/image tools, `bash tests/zpk/manager-check.sh --vm`. Its only
+writable drive is a newly created dedicated QCOW2 whose filesystem was formatted on
+a regular file, never a physical block device. Keep production persistence refusal,
+explicit development trust/permission review, journal reconciliation, data preservation
+and the unauthenticated API boundary intact. Do not expose fault injection in the CLI.
+
 ## Working process
+For App SDK/desktop changes read `docs/zpk/APP_SDK.md` and run
+`bash tests/apps/check.sh`, then `--browser` with Chromium and the prepared Forge
+builder. For final ISO integration run `bash scripts/build-iso.sh` followed by
+`bash tests/apps/check.sh --vm`. Never invoke its guest helper on the host. Keep
+opaque iframes, source/session validation and the read-only Core boundary intact.
+Do not claim CSP prevents all network egress, or replace typed unavailable file/settings
+APIs with fake persistence. Native broker operations require future authentication.
+
+For full native lifecycle integration read `docs/zpk/E2E.md`. Run
+`bash tests/e2e/check.sh` (image guards, SDK and first-party settings tests),
+`--packages` (three Forge-built versions), and `bash scripts/test-vm.sh --zpk-e2e`
+(three clean boots of one persistent QCOW2). `--legacy-vm` uses TCG/Conroe.
+Default Genesis smoke tests must retain `-snapshot`; persistence tests must never
+use it. E2E filesystem creation only targets freshly/exclusively created regular
+files inside `build/`, pinned by descriptors. Never reuse/format a user image.
+The guarded E2E helper/fault injection is a development fixture, not deployed in
+the production ISO or exposed through Manager's CLI/HTTP. Native sample settings
+use its private Unix socket/state; SDK settings remain unavailable until an
+authenticated broker exists. Interactive tests accept documented local commands only.
+
 - First summarize what the affected code currently does, identify risks, and propose a limited change.
 - Make focused edits and run available verification.
 - Report changed files, tests passed/failed/not run, remaining hazards and any manual QEMU validation needed.

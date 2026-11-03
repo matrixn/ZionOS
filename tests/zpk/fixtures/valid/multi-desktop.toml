@@ -1,0 +1,75 @@
+schema_version = 1
+permissions = ["desktop-ui"]
+
+[package]
+id = "org.zionos.hello"
+name = "ZPK Hello"
+version = "1.0.0"
+description = "Minimal native application for trusted local ZPK development."
+author = "ZionOS contributors"
+license = "MIT"
+categories = ["development"]
+
+[target]
+os = "linux"
+architecture = "x86_64"
+cpu = "x86-64-v1"
+libc = "musl"
+
+[build]
+system = "rust"
+toolchain = "rustc; x86_64-unknown-linux-musl; target-cpu=x86-64"
+reproducible = false
+
+[runtime]
+dependencies = []
+
+[compatibility]
+min_zionos = "0.6.1"
+upgrades_from = ">=0.1.0, <1.0.0"
+data_schema = 1
+conflicts = []
+replaces = []
+
+[[files]]
+path = "payload/bin/hello"
+kind = "executable"
+linkage = "static"
+permissions = []
+
+[[files]]
+path = "ui/index.html"
+kind = "ui"
+
+[[files]]
+path = "assets/icon.png"
+kind = "icon"
+
+[[desktop]]
+id = "hello"
+name = "Hello"
+entry = "ui/index.html"
+icon = "assets/icon.png"
+executable = "payload/bin/hello"
+categories = ["development"]
+permissions = []
+[desktop.window]
+width = 800
+height = 600
+min_width = 320
+min_height = 240
+resizable = true
+
+[[desktop]]
+id = "status"
+name = "Hello Status"
+entry = "ui/index.html"
+icon = "assets/icon.png"
+categories = ["utilities"]
+permissions = []
+[desktop.window]
+width = 640
+height = 480
+min_width = 320
+min_height = 240
+resizable = false

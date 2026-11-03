@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-accent="sea">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zion Hello</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../assets/hello.js" type="module"></script>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">ZION APP SDK · 1.0</div>
+    <header><img src="../assets/icon.png" alt="" width="56" height="56"><div><h1>Hello, Zion.</h1><p>A native app. Your desktop.</p></div></header>
+    <section class="card"><span class="dot"></span><div><strong id="connection">Connecting to your space…</strong><p id="theme">Waiting for the desktop theme.</p></div></section>
+    <div class="actions">
+      <button id="notify" disabled>Say hello</button>
+      <button id="resize" disabled>Room to create</button>
+      <button id="confirm" disabled>Ask for confirmation</button>
+      <button id="directory" disabled>Choose directory</button>
+      <button id="settings" disabled>Application settings</button>
+      <button id="capabilities" disabled>Available capabilities</button>
+    </div>
+    <p class="result" id="result" role="status" aria-live="polite">Use the window controls to minimize, maximize or open another instance.</p>
+    <footer>Made for your space. Works offline.</footer>
+  </main>
+</body>
+</html>

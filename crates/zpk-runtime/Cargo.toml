@@ -1,0 +1,30 @@
+[package]
+name = "zpk-runtime"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "zpk-runtime-demo"
+path = "../../examples/zpk-runtime-demo/main.rs"
+
+[[bin]]
+name = "zpk-runtime-guest"
+path = "../../tests/zpk/runtime-guest.rs"
+
+[dependencies]
+zpk-schema = { path = "../zpk-schema" }
+zpk-common = { path = "../zpk-common" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+toml = "1.1"
+semver = { version = "1.0", features = ["serde"] }
+sha2 = "0.10.9"
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[test]]
+name = "runtime"
+path = "../../tests/zpk/runtime.rs"

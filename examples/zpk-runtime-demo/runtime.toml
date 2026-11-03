@@ -1,0 +1,29 @@
+runtime_version = 1
+health = "unix-socket"
+package_id = "org.zionos.runtime-demo"
+version = "1.0.0"
+activation = "background"
+autostart = false
+storage_mode = "ephemeral-development"
+
+[identity]
+name = "zp_ac0dcb98ba3be9a94037"
+uid = 23101
+gid = 23101
+
+[limits]
+address_space_bytes = 67108864
+cpu_seconds = 2
+open_files = 32
+processes = 8
+file_bytes = 1048576
+
+[restart]
+max = 3
+period_seconds = 60
+delay_seconds = 1
+stop_seconds = 3
+
+[grants]
+data = ["state"]
+configuration_write = ["settings"]

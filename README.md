@@ -132,7 +132,184 @@ Detalii, mod verbose, loguri și limite: [Consola de boot](docs/BOOT_CONSOLE.md)
 - [x] KVM automat când poate crea o VM; fallback TCG; parametrii de disc/rețea nu pot fi suprascriși.
 - [ ] Auth/TLS, rate limiting per client, executor de formatare, restaurare și teste fizice.
 
-## Build și teste: Windows + WSL2
+## ZPK — TASK 00, fundație pentru pachete native
+
+- [x] Crate separat `crates/zpk-schema`: schema v1 Serde/TOML, validare manifest și CLI read-only.
+- [x] Arhivă USTAR + zstd cu SHA-256, inventar exact, limite de expansiune și refuz linkuri/căi nesigure.
+- [x] Metadate pentru executabile musl, dependențe, serviciu opțional, zero/una/mai multe intrări desktop,
+  ferestre, iconuri PNG, assets, permisiuni, date/config și compatibilitate de upgrade.
+- [x] Exemple valide, fixture-uri invalide, teste de arhive malițioase și CI separat.
+- [x] Verificate local: 23 teste ZPK, Clippy strict, regresiile Genesis, build ISO și boot QEMU nou.
+- [x] Exemplu nativ hello compilat și împachetat; inspectorul nu execută conținutul.
+- [ ] Instalare, repository, semnături, sandbox și integrare în desktop/ISO: neimplementate.
+
+**Hash-urile nu autentifică editorii. ZPK nesemnat este numai pentru dezvoltare locală de încredere.**
+Genesis 0.6.1 și comenzile sale rămân neschimbate; ZPK nu este inclus în ISO.
+Nu introducem încă workspace Cargo la rădăcină: păstrăm lockfile-ul și build-ul Core,
+iar noul crate are lockfile propriu. Detalii: [documentația ZPK](docs/zpk/README.md),
+[format v1](docs/zpk/FORMAT_V1.md), [verificări](docs/zpk/VERIFICATION.md).
+
+```sh
+bash tests/zpk/check.sh
+bash examples/zpk-hello/build-package.sh
+cargo run --locked --manifest-path crates/zpk-schema/Cargo.toml --bin zpk-inspect -- \
+  build/zpk/hello-1.0.0.zpk 0.6.1
+```
+
+## ZPK Forge — TASK 01
+
+- [x] CLI `zpk forge init/build/package/inspect/validate/clean` în `crates/zpk-forge`.
+- [x] Build-uri reale Rust/Cargo, C/C++ CMake, Go pur și Make cu staging declarativ.
+- [x] Builder Alpine separat, fără mount-uri host/credențiale/discuri, UID neprivilegiat,
+  rețea oprită, root read-only și limite de resurse; fără fallback la compilare host.
+- [x] `init` citește sursele fără execuție și raportează câmpurile ambigue `UNRESOLVED`.
+- [x] Staging temporar, colectare recursivă de biblioteci musl, verificare ELF/DT_NEEDED
+  și RUNPATH relativ; împachetare offline, hash-uri și provenance.
+- [x] Exemple `zion-hello-rust` și `zion-hello-c`, plus teste reale Go/Make/C++.
+- [x] Rebuild-uri identice byte-for-byte și execuție a exemplelor în Alpine minimal,
+  fără compilatoare sau runtime OCI cerut de aplicație.
+- [x] 16 teste offline Forge și 2 teste Docker; Foundation și Genesis păstrate.
+- [ ] aarch64/i686/ARMv7, CGO, Zig/Meson/Autotools, verificare completă ISA,
+  instalare și integrare în ISO: nesuportate în acest task.
+
+Docker este numai mediul de BUILD/test. Sursele pot executa cod arbitrar în builder;
+izolarea folosește kernelul Docker și nu oferă garanția unei VM dedicate. Flagurile
+x86-64 și proprietățile ELF sunt verificate, dar nu certifică toate instrucțiunile
+executate pe Core 2 Duo. Aceste limite sunt afișate la build/package și în provenance.
+
+```bash
+export CARGO_TARGET_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zionos/zpk-target"
+cargo build --locked --manifest-path crates/zpk-forge/Cargo.toml
+"$CARGO_TARGET_DIR/debug/zpk" forge build --project examples/zion-hello-rust --prepare-builder
+"$CARGO_TARGET_DIR/debug/zpk" forge package --project examples/zion-hello-rust
+"$CARGO_TARGET_DIR/debug/zpk" forge inspect examples/zion-hello-rust/.zpk-forge/org.zionos.zion-hello-rust-1.0.0.zpk
+bash tests/zpk/forge-check.sh --docker
+```
+
+La repetare, alege `package --output /director/existent/nou.zpk` sau folosește
+`forge clean --project ...` pentru a elimina numai rezultatele generate. Nu se
+suprascriu pachete existente. [Comenzi complete, manifest și limite](docs/zpk/FORGE.md)
+· [Verificări executate](docs/zpk/FORGE_VERIFICATION.md).
+
+## ZPK End-to-End Integration — TASK 05
+
+- [x] Source → Forge → validare `.zpk` → Manager local → OpenRC non-root → launcher/fereastră.
+- [x] Trei booturi curate cu același QCOW2: registry, UID și setări native păstrate.
+- [x] Upgrade real `1.0.0` → `1.1.0`; pornirea eșuată a candidatului `1.2.0` restaurează executabilul anterior.
+- [x] Întreruperi reale ale Manager: instalare staged și upgrade în activare, recuperat după reboot.
+- [x] Ferestre/assets retrase la upgrade/uninstall; datele rămân după dezinstalare.
+- [x] Setare nativă bounded, scrisă atomic de backend; acces local prin socket Unix privat.
+- [x] Mediu interactiv separat și imagini noi în `build/`; niciun disc fizic, fără `-snapshot` în testul persistent.
+- [x] Același scenariu complet verificat pe CPU Conroe emulat/TCG, separat de KVM; hardware Core 2 fizic neverificat.
+- [ ] Setări editabile din UI/SDK: necesită broker autentificat; răspunsul actual rămâne `UNAVAILABLE`.
+- [ ] Persistență automată de producție în ISO-ul live; bootstrap-ul E2E este exclusiv pentru VM-ul de test.
+
+[Ghid complet build/install/launch/upgrade](docs/zpk/E2E.md),
+[raport tehnic și verificări](docs/zpk/E2E_VERIFICATION.md).
+
+```sh
+bash tests/e2e/check.sh                  # teste rapide și regresii SDK
+bash tests/e2e/check.sh --packages       # trei versiuni compilate prin Forge
+bash scripts/build-iso.sh
+bash scripts/test-vm.sh --zpk-e2e        # trei booturi persistente + Chromium
+bash tests/e2e/check.sh --legacy-vm      # același scenariu, CPU Conroe/TCG
+bash tests/e2e/check.sh --interactive    # aplicație instalată; localhost:8080
+```
+
+Comenzile necesită toolchain/builder/Chromium pregătite conform ghidului. Pornirea
+normală `bash scripts/run-qemu.sh` păstrează ISO-ul live cu aplicațiile built-in.
+
+## Zion App SDK & Native Desktop Integration — TASK 04
+
+- [x] Registry dinamic built-in + ZPK instalate/activate; `GET /api/apps` read-only.
+- [x] Publicare Manager atomică, verificată SHA-256; resurse limitate la UI/assets declarate.
+- [x] Ferestre comune cu drag/resize/min/max, instanțe multiple, dock/pin, căutare și tastatură.
+- [x] SDK JavaScript/ESM + TypeScript: titlu, dimensiuni, temă, notificări și confirmări.
+- [x] Iframe cu origine opacă, CSP, handshake versionat și verificarea sursei/sesiunii/permisiunilor.
+- [x] `zion-hello`: backend Rust nativ compilat prin Forge, UI și icon; OpenRC non-root.
+- [x] ISO final, Chromium desktop/mobile și instalare/dezinstalare într-un QEMU dedicat verificate.
+- [ ] Fișiere/settings SDK: răspuns tipizat `UNAVAILABLE`; brokerul autentificat rămâne viitor.
+- [ ] Autentificare Core, origini dedicate aplicațiilor și izolare completă a rețelei browserului.
+
+Implementare și comenzi: [App SDK](docs/zpk/APP_SDK.md),
+[verificări executate](docs/zpk/APP_SDK_VERIFICATION.md),
+[exemplul Zion Hello](examples/zion-hello/README.md).
+ISO-ul live păstrează built-in-urile; instalarea necesită volume persistente și CLI-ul
+local Manager/Runtime pregătit. Nu există instalare sau pornire privilegiată prin HTTP.
+
+```sh
+npm --prefix web/zion-app-sdk ci --ignore-scripts --no-audit --no-fund
+bash tests/apps/check.sh
+# Cu Chromium, builderul Forge și toolchain-urile pregătite conform ghidului:
+bash tests/apps/check.sh --browser
+bash scripts/build-iso.sh
+bash tests/apps/check.sh --vm
+# Pornire normală a ISO-ului live:
+bash scripts/run-qemu.sh
+```
+
+## Native Package Manager — TASK 03
+
+- [x] `crates/zpk-manager`: CLI local privilegiat, registru SQLite separat de datele aplicațiilor și lock de concurență.
+- [x] Install/list/info/start/stop/restart/status/logs/upgrade/rollback/uninstall/verify și `repair --plan`.
+- [x] Tranzacții `PREPARED → STAGED → ACTIVATING → COMMITTED`, stări FAILED/RECOVERY_REQUIRED,
+  fsync, publicare fără suprascriere, compensare și reconciliere după întrerupere.
+- [x] Validare și extracție prin Foundation, identități/servicii native prin Runtime;
+  resolver offline pentru versiuni, dependențe lipsă/cicluri/conflicte și dependențe inverse.
+- [x] Politică explicită pentru pachete locale nesemnate și aprobarea exactă a permisiunilor;
+  filesystem-urile live/RAM sunt refuzate pentru instalare persistentă.
+- [x] Versiuni alăturate și rollback de executabile; date/config/loguri și identități păstrate la uninstall.
+- [x] Metadate pentru datele păstrate: UID/GID și schema rămân rezervate după uninstall/reboot;
+  reinstalarea incompatibilă este refuzată.
+- [x] Modele UI static/on-demand/backend comun; selecție explicită pentru executabile desktop ambigue.
+- [x] Exemplele Forge Rust/C au mod foreground `--serve`, socket Unix și contor persistent;
+  rularea obișnuită fără argumente rămâne print-and-exit.
+- [x] Teste de instalator cu servicii mock, 46 de întreruperi reale de proces și test QEMU
+  cu trei boot-uri pe același QCOW2 dedicat, inclusiv reinstalare în ordine inversă.
+- [ ] Catalog semnat, broker/UI autentificat, migrări de date, ștergerea datelor,
+  activări multi-pachet și garanții la pierderea alimentării: neimplementate/nevalidate.
+
+Nu există endpoint-uri HTTP de instalare, instalare pe hostul Windows/WSL sau runtime Docker.
+Managerul nu este adăugat automat în ISO. Persistența și configurația de boot trebuie
+pregătite separat. [Arhitectură și comenzi](docs/zpk/MANAGER.md)
+· [Verificări și limite](docs/zpk/MANAGER_VERIFICATION.md).
+
+```bash
+bash tests/zpk/manager-check.sh
+# Necesită ISO-ul Genesis, builderul Forge pregătit, QEMU/musl/xorriso/e2fsprogs:
+bash tests/zpk/manager-check.sh --vm
+```
+
+## Native ZPK Runtime — TASK 02
+
+- [x] `crates/zpk-runtime`: model de configurare administrator, lifecycle nativ și adaptor OpenRC extensibil.
+- [x] Start/stop/restart/status, health de proces sau Unix socket, logs și autostart;
+  respawn și oprire de grup prin `supervise-daemon`, fără supervisor global nou.
+- [x] Servicii background, backend comun pentru mai multe intrări desktop și model
+  on-demand/static fără daemon permanent obligatoriu.
+- [x] Versiuni root-owned în `/opt/zionos/apps/<id>/versions`, referință `current`,
+  date/config/loguri separate și directoare private cu identități dedicate neprivilegiate.
+- [x] Landlock ABI >=6 obligatoriu, seccomp x86-64, capabilități eliminate, no_new_privs
+  și limite rlimit; acces NAS/dispozitive/shell/IP și IPC neautorizat refuzat în VM.
+- [x] 13 teste unitare cu OpenRC mock și integrare nativă QEMU: lifecycle, crash budget,
+  CPU/memorie/FD/procese/fișiere, sănătate Unix, logs, autostart și date păstrate la restart.
+- [x] `zpk-common` partajează acum inspecția ELF între Forge și Runtime, fără Docker în runtime.
+- [ ] Broker autentificat, activare UI din desktop, cgroup-uri agregate, cote filesystem,
+  instalare/upgrade și persistență după reboot: neimplementate/nevalidate în acest task.
+
+Aplicațiile rulează ca procese Linux native: **fără Docker/OCI/Kubernetes la runtime**.
+Restricțiile implementate nu sunt o izolare echivalentă unei VM; declarațiile de
+permisiuni nu acordă singure acces OS. ISO-ul live nu presupune persistență și runtime-ul
+nu este adăugat automat în el. [Arhitectură, comenzi și proprietăți](docs/zpk/RUNTIME.md)
+· [Verificări](docs/zpk/RUNTIME_VERIFICATION.md).
+
+```bash
+bash tests/zpk/runtime-check.sh
+# După ce există ISO-ul Genesis; aplicațiile rulează numai în VM temporară:
+bash tests/zpk/runtime-check.sh --vm
+```
+
+## Build și teste Genesis: Windows + WSL2
 
 Rulează din Ubuntu WSL cu integrarea Docker Desktop activă. Ai nevoie de Rust,
 rustfmt/Clippy, target musl, `musl-tools`, Docker, QEMU, `qemu-img`, curl, Python 3 și Node.js.

@@ -1,0 +1,42 @@
+[package]
+name = "zpk-manager"
+version = "0.1.0"
+edition = "2021"
+publish = false
+default-run = "zpk"
+
+[[bin]]
+name = "zpk"
+path = "src/main.rs"
+
+[[bin]]
+name = "zpk-manager-guest"
+path = "../../tests/zpk/manager-guest.rs"
+
+[[bin]]
+name = "zpk-sdk-fixture"
+path = "../../tests/apps/fixture.rs"
+
+[[bin]]
+name = "zpk-e2e-guest"
+path = "../../tests/e2e/guest.rs"
+
+[dependencies]
+zpk-schema = { path = "../zpk-schema" }
+zpk-runtime = { path = "../zpk-runtime" }
+rusqlite = { version = "0.38", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1.1"
+semver = { version = "1", features = ["serde"] }
+libc = "0.2"
+
+[dev-dependencies]
+png = "0.18"
+tempfile = "3"
+tar = "0.4"
+zstd = { version = "0.13", default-features = false }
+
+[[test]]
+name = "manager"
+path = "../../tests/zpk/manager.rs"

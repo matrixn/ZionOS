@@ -1,0 +1,26 @@
+#!/sbin/openrc-run
+# Trusted ZPK Runtime adapter. No package-provided shell fragments or privileged hooks.
+name="ZPK @ID@"
+supervisor=supervise-daemon
+command=/usr/local/libexec/zpk-runtime
+command_args="launch --config @CONFIG@"
+pidfile="@CONTROL@/@SERVICE@.pid"
+respawn_delay=@DELAY@
+respawn_max=@MAX@
+respawn_period=@PERIOD@
+retry="TERM/@STOP@/KILL/2"
+stopgroup=yes
+umask=0077
+extra_commands="runtime_state healthcheck"
+
+depend() { after localmount; }
+runtime_state() {
+  printf '%s\n%s\n' "$(service_get_value child_pid)" "$(service_get_value start_count)"
+  if test -L "/run/openrc/failed/$RC_SVCNAME"; then printf '1\n'; else printf '0\n'; fi
+}
+healthcheck() {
+  /usr/local/libexec/zpk-runtime healthcheck --config @CONFIG@
+}
+start_pre() {
+  /usr/local/libexec/zpk-runtime verify --config @CONFIG@
+}

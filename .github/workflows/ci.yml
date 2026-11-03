@@ -2,13 +2,83 @@ name: ZionOS source checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/zpk-foundation, feat/zpk-forge, feat/zpk-runtime, feat/zpk-manager, feat/zion-app-sdk, feat/zpk-e2e-integration]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/zion-app-sdk/package-lock.json
+      - name: SDK development tools and real browser
+        working-directory: web/zion-app-sdk
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Prepare trusted Forge BUILD environment only
+        run: cargo run --locked --manifest-path crates/zpk-forge/Cargo.toml -- forge build --project examples/zion-hello --prepare-builder
+      - name: SDK types/protocol and real browser integration (no host application services)
+        run: bash tests/apps/check.sh --browser
+      - name: E2E image guardrails and three real Forge package versions (no host installation)
+        run: bash tests/e2e/check.sh --packages
+  manager:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Transaction, crash recovery and mock installer checks (no host services)
+        run: bash tests/zpk/manager-check.sh
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Runtime policy and mocked OpenRC checks (no host service changes)
+        run: bash tests/zpk/runtime-check.sh
+  forge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Forge tests, Clippy and isolated builds
+        run: bash tests/zpk/forge-check.sh --docker
+  zpk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
+      - name: ZPK formatting, tests and Clippy
+        run: |
+          bash tests/zpk/check.sh
+      - name: Build and inspect a real baseline musl example without executing it
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          bash examples/zpk-hello/build-package.sh
+          cargo run --locked --manifest-path crates/zpk-schema/Cargo.toml --bin zpk-inspect -- build/zpk/hello-1.0.0.zpk 0.6.1
   rust-and-source:
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +111,8 @@ jobs:
             if [ -f "$script" ]; then sh -n "$script"; fi
           done
           node --check web/desktop/app.js
+          node --check web/desktop/apps/registry.js
+          node --check web/desktop/apps/bridge.js
           node --test tests/desktop.test.cjs
       - name: Guardrails
         shell: bash

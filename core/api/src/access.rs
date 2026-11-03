@@ -66,6 +66,14 @@ impl Policy {
         }
         match request.headers().get(axum::http::header::ORIGIN) {
             None => true,
+            Some(origin)
+                if origin == "null"
+                    && request.uri().path().starts_with("/app-assets/")
+                    && [axum::http::Method::GET, axum::http::Method::HEAD]
+                        .contains(request.method()) =>
+            {
+                true
+            }
             Some(origin) => origin
                 .to_str()
                 .ok()

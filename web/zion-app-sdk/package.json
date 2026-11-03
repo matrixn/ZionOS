@@ -1,0 +1,21 @@
+{
+  "name": "@zionos/app-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Framework-independent Zion App browser bridge v1; no runtime dependencies",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {"types": "./dist/index.d.ts", "import": "./dist/zion-app-sdk.mjs"},
+    "./global": {"types": "./dist/zion-app-sdk.d.ts", "default": "./dist/zion-app-sdk.js"}
+  },
+  "browser": "dist/zion-app-sdk.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build-modules.cjs",
+    "test": "node --test ../../tests/apps/*.test.cjs",
+    "test:browser": "node ../../tests/apps/browser.cjs"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "playwright": "1.64.1"
+  }
+}

@@ -186,3 +186,30 @@ Comenzile complete de build/rulare/test sunt în [README](../README.md).
 
 Actualizarea următoare de pe `main`, cu loader animat și verificările sale, este
 documentată separat în [Consola de boot](BOOT_CONSOLE.md).
+
+## Milestone separat: ZPK Manager (TASK 03)
+
+Pe `feat/zpk-manager`, [managerul local](zpk/MANAGER.md) implementează instalarea de
+dezvoltare cu SQLite, tranzacții/reconciliere și Runtime nativ OpenRC. Nu extinde API-ul
+HTTP neautentificat și nu activează formatarea/provisioning-ul NAS. Verificările sunt
+în [raportul managerului](zpk/MANAGER_VERIFICATION.md), separat de auditul Genesis.
+Pentru roadmap-ul ulterior rămân autentificarea/brokerul, distribuția semnată,
+cotele agregate, backup/migrări ale datelor și integrarea persistentă de boot/UI.
+Acest milestone nu declară Genesis sau instalarea pachetelor pregătite pentru producție.
+
+## Milestone separat: App SDK (TASK 04)
+
+[SDK-ul și integrarea desktop](zpk/APP_SDK.md) adaugă registry ZPK dinamic, ferestre
+comune și UI în iframe opac, cu mesagerie verificată și API-uri browser limitate.
+Backendul exemplului este nativ OpenRC non-root; nu se adaugă instalare HTTP sau
+acces NAS. [Verificările](zpk/APP_SDK_VERIFICATION.md) includ ISO final, Chromium
+și QEMU real. Pentru producție rămân autentificarea, origini dedicate, brokerul nativ,
+cote agregate și persistența pregătită explicit. CSP nu izolează complet rețeaua.
+
+## Milestone separat: integrare ZPK (TASK 05)
+
+[Scenariul complet](zpk/E2E.md) leagă Forge, Manager, OpenRC și SDK în trei booturi
+cu același QCOW2 nou. Verifică registry/UID/setări native persistente, upgrade,
+compensarea pornirii eșuate, recuperarea unui jurnal întrerupt și dezinstalarea cu
+păstrarea datelor. Bootstrap-ul este exclusiv de test; ISO-ul live nu primește montare
+automată și API-urile rămân read-only. [Raport tehnic](zpk/E2E_VERIFICATION.md).

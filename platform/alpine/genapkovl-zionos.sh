@@ -48,6 +48,8 @@ ln -sf /etc/init.d/zion-network-info "$tmp/etc/runlevels/boot/zion-network-info"
 cp "$ZION_STAGE/zion-core" "$tmp/opt/zionos/bin/zion-core"
 cp "$ZION_STAGE/index.html" "$tmp/opt/zionos/web/index.html"
 cp "$ZION_STAGE/app.js" "$tmp/opt/zionos/web/app.js"
+mkdir -p "$tmp/opt/zionos/web/apps"
+cp "$ZION_STAGE/apps/registry.js" "$ZION_STAGE/apps/bridge.js" "$tmp/opt/zionos/web/apps/"
 cp "$ZION_STAGE/zion-core.initd" "$tmp/etc/init.d/zion-core"
 chmod 755 "$tmp/opt/zionos/bin/zion-core" "$tmp/etc/init.d/zion-core"
 ln -s /etc/init.d/zion-core "$tmp/etc/runlevels/default/zion-core"
@@ -86,7 +88,7 @@ for executable in usr/local/sbin/zion-lab-provision usr/local/sbin/zion-lab-reco
     opt/zionos/bin/zion-core etc/init.d/zion-core; do
     test -x "$tmp/$executable" || { echo "ERROR: missing executable $executable" >&2; exit 1; }
 done
-for asset in etc/inittab opt/zionos/web/index.html opt/zionos/web/app.js usr/local/lib/zionos/boot-ui.sh; do
+for asset in etc/inittab opt/zionos/web/index.html opt/zionos/web/app.js opt/zionos/web/apps/registry.js opt/zionos/web/apps/bridge.js usr/local/lib/zionos/boot-ui.sh; do
     test -s "$tmp/$asset" || { echo "ERROR: missing or empty $asset" >&2; exit 1; }
 done
 

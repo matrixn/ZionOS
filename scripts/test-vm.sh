@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ "${1:-}" == --zpk-e2e ]]; then
+  shift
+  exec bash "$ROOT/tests/e2e/check.sh" --vm "$@"
+fi
 runner="$ROOT/scripts/run-qemu.sh"
 lab_mode=0
 if [[ "${1:-}" == --lab ]]; then runner="$ROOT/scripts/run-qemu-lab.sh"; lab_mode=1; shift; fi

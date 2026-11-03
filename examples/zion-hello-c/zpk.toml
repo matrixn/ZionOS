@@ -1,0 +1,64 @@
+schema_version = 1
+permissions = ["background-service", "persistent-data"]
+
+[package]
+id = "org.zionos.zion-hello-c"
+name = "zion-hello-c"
+version = "1.0.0"
+description = "Minimal native application for trusted local ZPK development."
+author = "ZionOS contributors"
+license = "MIT"
+categories = ["development"]
+
+[target]
+os = "linux"
+architecture = "x86_64"
+cpu = "x86-64-v1"
+libc = "musl"
+
+[build]
+system = "cmake"
+toolchain = "Forge trusted Alpine 3.23 builder; x86-64-v1"
+reproducible = false
+
+[runtime]
+dependencies = []
+
+[compatibility]
+min_zionos = "0.6.1"
+upgrades_from = ">=0.1.0, <1.0.0"
+data_schema = 1
+conflicts = []
+replaces = []
+
+[[files]]
+path = "payload/bin/zion-hello-c"
+kind = "executable"
+linkage = "musl-dynamic"
+permissions = []
+
+[service]
+executable = "payload/bin/zion-hello-c"
+arguments = ["--serve"]
+run_as = "package"
+autostart = false
+permissions = ["background-service"]
+
+[[storage]]
+name = "state"
+kind = "data"
+schema = 1
+max_bytes = 1048576
+preserve_on_upgrade = true
+
+[forge]
+version = 1
+system = "cmake"
+inputs = ["CMakeLists.txt", "hello.c", "LICENSE"]
+license_file = "LICENSE"
+jobs = 2
+
+
+[[forge.stage]]
+from = "dest/usr/bin/zion-hello-c"
+to = "payload/bin/zion-hello-c"
